@@ -1,0 +1,1 @@
+MedRAG-Engine is an end-to-end Retrieval-Augmented Generation system for medical knowledge retrieval and question answering. It processes biomedical articles, generates semantic embeddings, stores them in Qdrant, retrieves relevant evidence, and uses a local LLM to generate answers grounded in the retrieved context.
