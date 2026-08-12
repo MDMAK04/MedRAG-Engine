@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+MYENV/
+venv/
+.venv/
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Qdrant
+qdrant_storage/
+storage/
+
+# Generated / processed data
+Data/processed/
+Data/raw/
+
+# Large source data
+Data/raw/**/*.pdf
+Data/raw/**/*.xml
+Data/raw/**/*.jpg
+Data/raw/**/*.txt
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
