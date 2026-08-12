@@ -36,3 +36,6 @@ Data/raw/**/*.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Evaluation results
+Data/evaluation/results/
