@@ -1,108 +1,221 @@
-import json
 from pathlib import Path
+from typing import Optional
 
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
+from qdrant_client.models import (
+    Filter,
+    FieldCondition,
+    MatchAny,
+)
 
+
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+
+QDRANT_URL = "http://localhost:6333"
 
 COLLECTION_NAME = "medical_articles"
-QDRANT_URL = "http://localhost:6333"
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 TOP_K = 5
 
 
-def load_embedding_model():
-    print("Loading embedding model...")
+# =========================================================
+# QDRANT
+# =========================================================
 
-    model = SentenceTransformer(MODEL_NAME)
+print("Initializing Qdrant...")
 
-    print("Model loaded")
+client = QdrantClient(
+    url=QDRANT_URL
+)
 
-    return model
+print("Qdrant connected")
 
 
-def create_question_embedding(model, question):
+# =========================================================
+# EMBEDDING MODEL
+# =========================================================
+
+print("Loading embedding model...")
+
+model = SentenceTransformer(
+    MODEL_NAME
+)
+
+print("Embedding model loaded")
+
+
+# =========================================================
+# RETRIEVE
+# =========================================================
+
+def retrieve(
+    question: str,
+    pdf_names: Optional[list[str]] = None,
+):
+    """
+    Retrieve the most relevant chunks from Qdrant.
+
+    Parameters
+    ----------
+    question:
+        User question.
+
+    pdf_names:
+        Optional list of PDF filenames.
+
+        Example:
+        ["Test.pdf"]
+
+        or:
+
+        ["Test.pdf", "Test2.pdf"]
+    """
+
+    print("\n" + "=" * 60)
+    print("RETRIEVAL")
+    print("=" * 60)
+
+    print("Question:", question)
+    print("PDF filter:", pdf_names)
+
+    # =====================================================
+    # CREATE QUESTION EMBEDDING
+    # =====================================================
+
     print("Creating question embedding...")
 
-    embedding = model.encode(
+    question_embedding = model.encode(
         question,
         normalize_embeddings=True
-    )
+    ).tolist()
 
     print("Question embedding created")
 
-    return embedding.tolist()
+    # =====================================================
+    # BUILD QDRANT FILTER
+    # =====================================================
 
+    query_filter = None
 
-def retrieve_chunks(client, question_embedding):
+    if pdf_names:
+
+        query_filter = Filter(
+            must=[
+                FieldCondition(
+                    key="filename",
+                    match=MatchAny(
+                        any=pdf_names
+                    ),
+                )
+            ]
+        )
+
+        print(
+            "Qdrant filter created for:",
+            pdf_names
+        )
+
+    # =====================================================
+    # SEARCH QDRANT
+    # =====================================================
+
     print("Searching Qdrant...")
 
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=question_embedding,
-        limit=TOP_K
+        query_filter=query_filter,
+        limit=TOP_K,
+        with_payload=True,
     ).points
 
-    return results
-
-
-def retrieve(question):
-    print("Connecting to Qdrant...")
-
-    client = QdrantClient(url=QDRANT_URL)
-
-    print("Connected successfully")
-
-    model = load_embedding_model()
-
-    question_embedding = create_question_embedding(
-        model,
-        question
+    print(
+        f"Retrieved {len(results)} chunks"
     )
 
-    results = retrieve_chunks(
-        client,
-        question_embedding
-    )
+    # =====================================================
+    # FORMAT RESULTS
+    # =====================================================
 
-    return results
+    formatted_results = []
 
+    for result in results:
 
-def main():
+        payload = result.payload or {}
 
-    question = (
-        "What is the association between family history "
-        "of stroke and ischemic stroke risk?"
-    )
+        formatted_results.append(
+            {
+                "text": payload.get(
+                    "text",
+                    ""
+                ),
 
-    print()
-    print("Question:")
-    print(question)
+                "score": result.score,
 
-    results = retrieve(question)
+                # Qdrant uses "filename"
+                "filename": payload.get(
+                    "filename"
+                ),
 
-    print()
-    print("==============================")
-    print("RETRIEVED CHUNKS")
-    print("==============================")
+                # Keep file_name too in case
+                # another part of the application
+                # expects this key.
+                "file_name": payload.get(
+                    "filename"
+                ),
 
-    for rank, result in enumerate(results, start=1):
+                "page": payload.get(
+                    "page"
+                ),
 
-        print()
-        print(f"Rank: {rank}")
-        print(f"Score: {result.score}")
+                "chunk_id": payload.get(
+                    "chunk_id"
+                ),
 
-        payload = result.payload
+                "path": payload.get(
+                    "path"
+                ),
+            }
+        )
 
-        print(f"Chunk ID: {payload.get('chunk_id')}")
-        print(f"PMCID: {payload.get('pmcid')}")
-        print(f"Path: {payload.get('path')}")
+    # =====================================================
+    # DEBUG
+    # =====================================================
 
-        print()
-        print("Text:")
-        print(payload.get("text"))
+    for index, item in enumerate(
+        formatted_results,
+        start=1
+    ):
 
+        print(
+            f"\nResult {index}"
+        )
 
-if __name__ == "__main__":
-    main()
+        print(
+            "File:",
+            item["filename"]
+        )
+
+        print(
+            "Page:",
+            item["page"]
+        )
+
+        print(
+            "Score:",
+            item["score"]
+        )
+
+        print(
+            "Chunk ID:",
+            item["chunk_id"]
+        )
+
+    return formatted_results

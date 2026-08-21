@@ -1,73 +1,111 @@
-from pathlib import Path
-import sys
-
-# Permet d'importer retriever.py
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.append(str(PROJECT_ROOT / "Scripts" / "retrieval"))
-
-from retriever import retrieve
-
 def build_context(results):
+
     """
-    Transforme les résultats de Qdrant
-    en contexte texte utilisable par un LLM.
+    Construit le contexte scientifique pour le LLM.
+
+    Les chunks appartenant au même article
+    sont regroupés sous un même article.
     """
+
+    if not results:
+
+        return "No scientific context was retrieved."
+
+
+    articles = {}
+
+
+    for result in results:
+
+        payload = result.payload or {}
+
+        pmcid = payload.get(
+            "pmcid",
+            "Unknown"
+        )
+
+        if pmcid not in articles:
+
+            articles[pmcid] = {
+                "pmcid": pmcid,
+                "chunks": []
+            }
+
+
+        articles[pmcid]["chunks"].append({
+
+            "chunk_id": payload.get(
+                "chunk_id",
+                "Unknown"
+            ),
+
+            "path": payload.get(
+                "path",
+                "Unknown"
+            ),
+
+            "text": payload.get(
+                "text",
+                ""
+            ),
+
+            "score": result.score
+        })
+
+
     context_parts = []
-    for rank, result in enumerate(results, start=1):
-        payload = result.payload
-        pmcid = payload.get("pmcid", "Unknown")
-        path = payload.get("path", "Unknown")
-        chunk_id = payload.get("chunk_id", "Unknown")
-        text = payload.get("text", "")
-
-        context_part = f"""
-SOURCE {rank}
-
-PMCID: {pmcid}
-SECTION: {path}
-CHUNK ID: {chunk_id}
-SIMILARITY SCORE: {result.score:.4f}
-
-TEXT:
-{text}
-"""
-
-        context_parts.append(context_part.strip())
-
-    return "\n\n" + "\n\n".join(context_parts)
 
 
-def main():
+    for article in articles.values():
 
-    question = (
-        "What is the association between family history "
-        "of stroke and ischemic stroke risk?"
+        source_parts = []
+
+        source_parts.append(
+            f"ARTICLE: {article['pmcid']}"
+        )
+
+        source_parts.append(
+            "This context comes from one scientific article."
+        )
+
+        source_parts.append("")
+
+
+        for chunk_index, chunk in enumerate(
+            article["chunks"],
+            start=1
+        ):
+
+            source_parts.append(
+                f"CHUNK {chunk_index}"
+            )
+
+            source_parts.append(
+                f"SECTION: {chunk['path']}"
+            )
+
+            source_parts.append(
+                f"CHUNK ID: {chunk['chunk_id']}"
+            )
+
+            source_parts.append(
+                "TEXT:"
+            )
+
+            source_parts.append(
+                chunk["text"]
+            )
+
+            source_parts.append("")
+
+
+        context_parts.append(
+            "\n".join(
+                source_parts
+            ).strip()
+        )
+
+
+    return "\n\n".join(
+        context_parts
     )
-
-    print("Question:")
-    print(question)
-
-    print()
-    print("Retrieving relevant chunks...")
-
-    results = retrieve(question)
-
-    print(f"Retrieved chunks: {len(results)}")
-
-    print()
-    print("Building context...")
-
-    context = build_context(results)
-
-    print("Context built successfully")
-
-    print()
-    print("==============================")
-    print("GENERATED CONTEXT")
-    print("==============================")
-
-    print(context)
-
-
-if __name__ == "__main__":
-    main()

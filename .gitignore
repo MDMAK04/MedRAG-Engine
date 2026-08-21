@@ -39,3 +39,9 @@ Thumbs.db
 
 # Evaluation results
 Data/evaluation/results/
+
+.env
+__pycache__/
+*.pyc
+.next/
+node_modules/
