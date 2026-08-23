@@ -32,7 +32,8 @@ TOP_K = 5
 print("Initializing Qdrant...")
 
 client = QdrantClient(
-    url=QDRANT_URL
+    url=QDRANT_URL,
+    check_compatibility=False
 )
 
 print("Qdrant connected")
@@ -145,45 +146,28 @@ def retrieve(
     # =====================================================
 
     formatted_results = []
+    seen_chunk_ids = set()
 
     for result in results:
-
         payload = result.payload or {}
+        chunk_id = payload.get("chunk_id", "")
 
-        formatted_results.append(
-            {
-                "text": payload.get(
-                    "text",
-                    ""
-                ),
+        # Ignorer les doublons
+        if chunk_id in seen_chunk_ids:
+            continue
 
-                "score": result.score,
+        seen_chunk_ids.add(chunk_id)
 
-                # Qdrant uses "filename"
-                "filename": payload.get(
-                    "filename"
-                ),
+        formatted_results.append({
+            "text": payload.get("text", ""),
+            "score": result.score,
+            "filename": payload.get("filename"),
+            "file_name": payload.get("filename"),
+            "page": payload.get("page"),
+            "chunk_id": chunk_id,
+            "path": payload.get("path"),
+        })
 
-                # Keep file_name too in case
-                # another part of the application
-                # expects this key.
-                "file_name": payload.get(
-                    "filename"
-                ),
-
-                "page": payload.get(
-                    "page"
-                ),
-
-                "chunk_id": payload.get(
-                    "chunk_id"
-                ),
-
-                "path": payload.get(
-                    "path"
-                ),
-            }
-        )
 
     # =====================================================
     # DEBUG

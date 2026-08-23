@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 type SelectedFile = {
   id: string;
@@ -10,28 +10,116 @@ type SelectedFile = {
 type Message = {
   role: "user" | "assistant";
   content: string;
+  sources?: { file_name: string; page: number; score: number }[];
+};
+
+type Research = {
+  id: string;
+  title: string;
+  timestamp: number;
+  messages: Message[];
 };
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // State pour la sidebar
 
   const [question, setQuestion] = useState("");
-
-  const [selectedFiles, setSelectedFiles] =
-    useState<SelectedFile[]>([]);
-
-  const [messages, setMessages] =
-    useState<Message[]>([]);
-
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // History state
+  const [researches, setResearches] = useState<Research[]>([]);
+  const [currentResearchId, setCurrentResearchId] = useState<string>("");
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("medrag_history");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setResearches(parsed);
+    }
+
+    // Create initial research session with a UNIQUE ID
+    const initialId = "research_" + Date.now() + "_" + Math.random().toString(36).substring(7);
+    setCurrentResearchId(initialId);
+  }, []);
+
+  // Save history to localStorage whenever researches change
+  useEffect(() => {
+    if (researches.length > 0) {
+      localStorage.setItem("medrag_history", JSON.stringify(researches));
+    }
+  }, [researches]);
+
+  // =========================================================
+  // CREATE NEW RESEARCH
+  // =========================================================
+
+  function handleNewResearch() {
+    // Sauvegarder la recherche actuelle si elle contient des messages
+    if (messages.length > 0) {
+      const firstQuestion = messages.find((m) => m.role === "user")?.content || "Untitled Research";
+      const title = firstQuestion.substring(0, 50) + (firstQuestion.length > 50 ? "..." : "");
+
+      // Générer un ID UNIQUE pour la recherche sauvegardée
+      const savedId = "research_" + Date.now() + "_" + Math.random().toString(36).substring(7);
+      
+      const savedResearch: Research = {
+        id: savedId,
+        title,
+        timestamp: Date.now(),
+        messages,
+      };
+
+      // Ajouter la recherche sauvegardée à l'historique, en évitant le doublon
+      setResearches((prev) => {
+        const filtered = prev.filter((r) => r.id !== currentResearchId);
+        return [savedResearch, ...filtered];
+      });
+    }
+
+    // Générer un NOUVEL ID pour la session actuelle
+    const newId = "research_" + Date.now() + "_" + Math.random().toString(36).substring(7);
+    setCurrentResearchId(newId);
+    setMessages([]);
+    setQuestion("");
+    setSelectedFiles([]);
+    setShowHistory(false);
+  }
+
+  // =========================================================
+  // LOAD RESEARCH FROM HISTORY
+  // =========================================================
+
+  function handleLoadResearch(research: Research) {
+    setCurrentResearchId(research.id);
+    setMessages(research.messages);
+    setQuestion("");
+    setSelectedFiles([]);
+    setShowHistory(false);
+  }
+
+  // =========================================================
+  // DELETE RESEARCH
+  // =========================================================
+
+  function handleDeleteResearch(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setResearches((prev) => prev.filter((r) => r.id !== id));
+
+    if (id === currentResearchId) {
+      handleNewResearch();
+    }
+  }
 
   // =========================================================
   // SELECT PDF
   // =========================================================
 
-  function handleFileSelect(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
 
     const pdfFiles = files.filter(
@@ -41,9 +129,7 @@ export default function Home() {
     );
 
     setSelectedFiles((previous) => {
-      const existingNames = new Set(
-        previous.map((item) => item.file.name)
-      );
+      const existingNames = new Set(previous.map((item) => item.file.name));
 
       const newFiles = pdfFiles
         .filter((file) => !existingNames.has(file.name))
@@ -55,7 +141,6 @@ export default function Home() {
       return [...previous, ...newFiles];
     });
 
-    // Allow selecting the same file again
     event.target.value = "";
   }
 
@@ -75,84 +160,36 @@ export default function Home() {
 
   async function handleAsk() {
     const trimmedQuestion = question.trim();
-  
+
     if (!trimmedQuestion || loading) {
       return;
     }
-  
-    if (selectedFiles.length === 0) {
-      alert("Please select at least one PDF.");
-      return;
-    }
-  
+
     setLoading(true);
-  
+
     const userMessage: Message = {
       role: "user",
       content: trimmedQuestion,
     };
-  
-    setMessages((previous) => [
-      ...previous,
-      userMessage,
-    ]);
-  
+
+    setMessages((previous) => [...previous, userMessage]);
+
+    // ✅ VIDER LE CHAMP IMMÉDIATEMENT
+    setQuestion("");
+
     try {
       const formData = new FormData();
-  
-      // -----------------------------------------------------
-      // Question
-      // -----------------------------------------------------
-  
-      formData.append(
-        "question",
-        trimmedQuestion
-      );
-  
-      // -----------------------------------------------------
-      // History
-      // -----------------------------------------------------
-  
-      formData.append(
-        "history",
-        JSON.stringify(messages)
-      );
-  
-      // -----------------------------------------------------
-      // Selected PDFs
-      //
-      // Example:
-      //
-      // Test.pdf,Test2.pdf
-      // -----------------------------------------------------
-  
-      const selectedPdfNames = selectedFiles
-        .map((item) => item.file.name)
-        .join(",");
-  
-      formData.append(
-        "selected_pdfs",
-        selectedPdfNames
-      );
-  
-      // -----------------------------------------------------
-      // Debug
-      // -----------------------------------------------------
-  
-      console.log(
-        "Sending question:",
-        trimmedQuestion
-      );
-  
-      console.log(
-        "Selected PDFs:",
-        selectedPdfNames
-      );
-  
-      // -----------------------------------------------------
-      // Backend request
-      // -----------------------------------------------------
-  
+
+      formData.append("question", trimmedQuestion);
+      formData.append("history", JSON.stringify(messages));
+
+      // ✅ CORRECTION POUR LE MODE SANS PDF
+      const selectedPdfNames = selectedFiles.length > 0 
+        ? selectedFiles.map((item) => item.file.name).join(",")
+        : ""; // Envoie une chaîne vide si aucun PDF
+
+      formData.append("selected_pdfs", selectedPdfNames);
+
       const response = await fetch(
         "http://127.0.0.1:8000/api/chat",
         {
@@ -160,71 +197,34 @@ export default function Home() {
           body: formData,
         }
       );
-  
-      // -----------------------------------------------------
-      // Error handling
-      // -----------------------------------------------------
-  
+
       if (!response.ok) {
-        const errorText =
-          await response.text();
-  
-        console.error(
-          "Backend error:",
-          errorText
-        );
-  
-        throw new Error(
-          errorText ||
-          "Request failed."
-        );
+        const errorText = await response.text();
+        console.error("Backend error:", errorText);
+        throw new Error(errorText || "Request failed.");
       }
-  
-      // -----------------------------------------------------
-      // Response
-      // -----------------------------------------------------
-  
+
       const data = await response.json();
-  
-      console.log(
-        "Backend response:",
-        data
-      );
-  
-      // -----------------------------------------------------
-      // Add assistant message
-      // -----------------------------------------------------
-  
+
+      // ✅ AJOUT DES SOURCES DANS LE MESSAGE
       setMessages((previous) => [
         ...previous,
         {
           role: "assistant",
           content: data.answer,
+          sources: data.sources || [],
         },
       ]);
-  
-      // -----------------------------------------------------
-      // Clear question
-      // -----------------------------------------------------
-  
-      setQuestion("");
-  
     } catch (error) {
-  
-      console.error(
-        "Chat error:",
-        error
-      );
-  
+      console.error("Chat error:", error);
+
       setMessages((previous) => [
         ...previous,
         {
           role: "assistant",
-          content:
-            "Unable to process your request. Check the backend terminal.",
+          content: "Unable to process your request. Check the backend terminal.",
         },
       ]);
-  
     } finally {
       setLoading(false);
     }
@@ -234,323 +234,202 @@ export default function Home() {
   // ENTER
   // =========================================================
 
-  function handleKeyDown(
-    event: React.KeyboardEvent<HTMLTextAreaElement>
-  ) {
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-
       handleAsk();
     }
   }
 
   return (
-    <main
-      className="
-        min-h-screen
-        bg-white
-        text-slate-900
-        flex
-      "
-    >
-
+    <main className="min-h-screen bg-white text-slate-900 flex">
       {/* ================================================= */}
-      {/* SIDEBAR */}
+      {/* SIDEBAR - FIXED (Repliable) */}
       {/* ================================================= */}
 
-      <aside
-        className="
-          w-[220px]
-          border-r
-          border-slate-200
-          flex
-          flex-col
-          shrink-0
-        "
-      >
-
-        <div
-          className="
-            px-5
-            py-5
-            border-b
-            border-slate-200
-          "
-        >
-
-          <div
-            className="
-              flex
-              items-center
-              gap-3
-            "
-          >
-
-            <div
-              className="
-                w-8
-                h-8
-                rounded-lg
-                bg-black
-                text-white
-                flex
-                items-center
-                justify-center
-                font-semibold
-              "
-            >
-              M
+      <aside className={`${sidebarOpen ? 'w-[220px]' : 'w-0'} border-r border-slate-200 flex flex-col shrink-0 fixed left-0 top-0 h-screen overflow-hidden transition-all duration-300`}>
+        {/* Header */}
+        <div className="w-[220px] px-5 py-5 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            {/* LOGO MEDICAL - M + CONNEXION */}
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center shadow-md">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
             </div>
-
             <div>
-
-              <div
-                className="
-                  font-semibold
-                  text-sm
-                "
-              >
-                MedIntel-AI
-              </div>
-
-              <div
-                className="
-                  text-xs
-                  text-slate-500
-                "
-              >
-                Medical Research
-              </div>
-
+              <div className="font-bold text-sm tracking-tight">MedIntel-AI</div>
+              <div className="text-[11px] text-slate-500">Medical AI Platform</div>
             </div>
-
           </div>
-
         </div>
 
-        <div className="p-4">
-
+        {/* New Research Button */}
+        <div className="w-[220px] p-4">
           <button
             type="button"
-            className="
-              w-full
-              bg-black
-              text-white
-              rounded-lg
-              py-3
-              text-sm
-            "
+            onClick={handleNewResearch}
+            className="w-full bg-black text-white rounded-lg py-3 text-sm hover:bg-slate-800 transition"
           >
             + New research
           </button>
-
         </div>
 
-        <div className="px-5">
-
-          <div
-            className="
-              text-[11px]
-              tracking-[0.2em]
-              text-slate-400
-              mb-3
-            "
-          >
+        {/* Workspace Section */}
+        <div className="w-[220px] px-5 flex-1 overflow-y-auto">
+          <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-3">
             WORKSPACE
           </div>
 
-          <div
-            className="
-              bg-slate-100
-              rounded-lg
-              px-3
-              py-2
-              text-sm
-            "
+          <button
+            onClick={() => {
+              setShowHistory(false);
+              setMessages([]);
+              setQuestion("");
+              setSelectedFiles([]);
+            }}
+            className={`w-full text-left rounded-lg px-3 py-2 text-sm transition ${
+              !showHistory && messages.length === 0
+                ? "bg-slate-100 font-medium"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
           >
             Research
-          </div>
+          </button>
 
-          <div
-            className="
-              px-3
-              py-3
-              text-sm
-              text-slate-600
-            "
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className={`w-full text-left mt-2 rounded-lg px-3 py-2 text-sm transition ${
+              showHistory
+                ? "bg-slate-100 font-medium"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
           >
-            History
-          </div>
+            History ({researches.length})
+          </button>
 
+          {/* History List - DESIGN PRO EN GRILLE */}
+          {showHistory && (
+            <div className="mt-4 space-y-2">
+              {researches.length === 0 ? (
+                <div className="text-xs text-slate-400 px-2">
+                  No research saved yet
+                </div>
+              ) : (
+                researches.map((research) => (
+                  <div
+                    key={research.id}
+                    onClick={() => handleLoadResearch(research)}
+                    className="group relative cursor-pointer"
+                  >
+                    {/* Carte de l'historique */}
+                    <div className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 hover:border-slate-300 transition">
+                      <div className="text-xs font-semibold text-slate-800 truncate mb-1">
+                        {research.title}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(research.timestamp).toLocaleDateString()} 
+                        </span>
+                        <span className="text-[10px] bg-slate-100 rounded-full px-2 py-0.5">
+                          {research.messages.length} msgs
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bouton Supprimer */}
+                    <button
+                      onClick={(e) => handleDeleteResearch(research.id, e)}
+                      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-600 text-lg leading-none transition"
+                      aria-label="Delete research"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
-
       </aside>
 
-
       {/* ================================================= */}
-      {/* MAIN */}
+      {/* MAIN CONTENT - Offset for fixed sidebar */}
       {/* ================================================= */}
 
-      <section
-        className="
-          flex-1
-          flex
-          flex-col
-          min-w-0
-        "
-      >
-
+      <section className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'ml-[220px]' : 'ml-0'}`}>
         {/* HEADER */}
-
-        <header
-          className="
-            h-[70px]
-            border-b
-            border-slate-200
-            flex
-            items-center
-            justify-between
-            px-8
-          "
-        >
-
-          <div>
-
-            <div
-              className="
-                font-semibold
-              "
+        <header className="h-[70px] border-b border-slate-200 flex items-center justify-between px-8">
+          <div className="flex items-center gap-3">
+            {/* ICON POUR CACHER/AFFICHER LA SIDEBAR */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="w-8 h-8 rounded-lg border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition"
+              title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
             >
-              Medical Research Assistant
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+            
+            <div>
+              <div className="font-bold text-lg">Medical Research Assistant</div>
+              <div className="text-xs text-slate-500">
+                Search and analyze scientific literature
+              </div>
             </div>
-
-            <div
-              className="
-                text-sm
-                text-slate-500
-              "
-            >
-              Search and analyze scientific literature
-            </div>
-
           </div>
 
-          <div
-            className="
-              border
-              border-slate-200
-              rounded-full
-              px-4
-              py-2
-              text-xs
-              text-slate-600
-            "
-          >
-
-            <span
-              className="
-                inline-block
-                w-2
-                h-2
-                rounded-full
-                bg-green-500
-                mr-2
-              "
-            />
-
-            System ready
-
+          <div className="flex items-center gap-3">
+            {/* Badge Ollama */}
+            <div className="border border-slate-200 rounded-full px-3 py-1.5 text-[10px] text-slate-600 bg-slate-50">
+              ⚡ Powered by <span className="font-bold">Ollama</span>
+            </div>
+            
+            {/* Status */}
+            <div className="border border-slate-200 rounded-full px-4 py-1.5 text-xs text-slate-600">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2" />
+              System ready
+            </div>
           </div>
-
         </header>
-
 
         {/* ================================================= */}
         {/* CHAT */}
         {/* ================================================= */}
 
-        <div
-          className="
-            flex-1
-            overflow-y-auto
-            px-8
-            py-10
-          "
-        >
-
-          {messages.length === 0 && (
-
-            <div
-              className="
-                max-w-2xl
-                mx-auto
-                text-center
-                pt-20
-              "
-            >
-
-              <div
-                className="
-                  text-xs
-                  tracking-[0.25em]
-                  text-slate-400
-                  mb-4
-                "
-              >
+        <div className="flex-1 overflow-y-auto px-8 py-10">
+          {messages.length === 0 && !showHistory && (
+            <div className="max-w-2xl mx-auto text-center pt-20">
+              <div className="text-xs tracking-[0.25em] text-slate-400 mb-4">
                 AI MEDICAL RESEARCH
               </div>
 
-              <h1
-                className="
-                  text-4xl
-                  font-semibold
-                  mb-5
-                "
-              >
+              <h1 className="text-4xl font-semibold mb-5">
                 Research medical literature
               </h1>
 
-              <p
-                className="
-                  text-slate-500
-                "
-              >
-                Ask a medical research question
-                or add PDFs to analyze their
+              <p className="text-slate-500">
+                Ask a medical research question or add PDFs to analyze their
                 scientific content.
               </p>
-
             </div>
-
           )}
 
-          <div
-            className="
-              max-w-3xl
-              mx-auto
-              space-y-8
-            "
-          >
-
-            {messages.map(
-              (message, index) => (
-
+          <div className="max-w-3xl mx-auto space-y-8">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={
+                  message.role === "user"
+                    ? "flex justify-end"
+                    : "flex justify-start"
+                }
+              >
                 <div
-                  key={index}
                   className={
                     message.role === "user"
-                      ? "flex justify-end"
-                      : "flex justify-start"
-                  }
-                >
-
-                  <div
-                    className={
-                      message.role === "user"
-                        ? `
+                      ? `
                           max-w-[80%]
                           bg-black
                           text-white
@@ -559,89 +438,60 @@ export default function Home() {
                           py-4
                           text-sm
                         `
-                        : `
+                      : `
                           max-w-[90%]
                           text-slate-800
                           leading-7
                           text-sm
                         `
-                    }
-                  >
-
-                    {message.role === "assistant" && (
-
-                      <div
-                        className="
-                          text-[11px]
-                          tracking-[0.2em]
-                          text-slate-400
-                          mb-2
-                        "
-                      >
-                        MEDINTEL-AI
-                      </div>
-
-                    )}
-
-                    <div
-                      className="
-                        whitespace-pre-wrap
-                      "
-                    >
-                      {message.content}
+                  }
+                >
+                  {message.role === "assistant" && (
+                    <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-2">
+                      MEDINTEL-AI
                     </div>
+                  )}
 
+                  <div className="whitespace-pre-wrap">
+                    {message.content}
                   </div>
 
+                  {/* SOURCES */}
+                  {message.role === "assistant" && message.sources && message.sources.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-slate-200">
+                      <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-2 font-bold">
+                        📚 SOURCES UTILISÉES
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {message.sources.map((source, i) => (
+                          <div 
+                            key={i} 
+                            className="bg-blue-50 border border-blue-200 text-blue-700 rounded-full px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition"
+                          >
+                            📄 {source.file_name} • Page {source.page}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-              )
-            )}
-
+              </div>
+            ))}
           </div>
-
         </div>
-
 
         {/* ================================================= */}
         {/* INPUT */}
         {/* ================================================= */}
 
-        <div
-          className="
-            border-t
-            border-slate-200
-            p-6
-          "
-        >
-
-          <div
-            className="
-              max-w-3xl
-              mx-auto
-            "
-          >
-
-            <div
-              className="
-                border
-                border-slate-300
-                rounded-2xl
-                overflow-hidden
-                bg-white
-                shadow-sm
-              "
-            >
-
+        <div className="border-t border-slate-200 p-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-sm">
               {/* QUESTION */}
 
               <textarea
                 value={question}
-                onChange={(event) =>
-                  setQuestion(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => setQuestion(event.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={
                   selectedFiles.length > 0
@@ -661,109 +511,56 @@ export default function Home() {
                 "
               />
 
-
               {/* SELECTED FILES */}
 
               {selectedFiles.length > 0 && (
+                <div className="px-4 py-2 flex flex-wrap gap-2">
+                  {selectedFiles.map((item) => (
+                    <div
+                      key={item.id}
+                      className="
+                        flex
+                        items-center
+                        gap-2
+                        bg-slate-100
+                        border
+                        border-slate-200
+                        rounded-lg
+                        px-3
+                        py-2
+                        text-xs
+                      "
+                    >
+                      <span className="text-slate-500">PDF</span>
 
-                <div
-                  className="
-                    px-4
-                    py-2
-                    flex
-                    flex-wrap
-                    gap-2
-                  "
-                >
+                      <span className="max-w-[180px] truncate">
+                        {item.file.name}
+                      </span>
 
-                  {selectedFiles.map(
-                    (item) => (
-
-                      <div
-                        key={item.id}
+                      <button
+                        type="button"
+                        onClick={() => removeFile(item.id)}
+                        disabled={loading}
                         className="
-                          flex
-                          items-center
-                          gap-2
-                          bg-slate-100
-                          border
-                          border-slate-200
-                          rounded-lg
-                          px-3
-                          py-2
-                          text-xs
+                          text-slate-500
+                          hover:text-black
+                          text-base
+                          leading-none
+                          disabled:opacity-40
                         "
+                        aria-label={`Remove ${item.file.name}`}
                       >
-
-                        <span
-                          className="
-                            text-slate-500
-                          "
-                        >
-                          PDF
-                        </span>
-
-                        <span
-                          className="
-                            max-w-[180px]
-                            truncate
-                          "
-                        >
-                          {item.file.name}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeFile(item.id)
-                          }
-                          disabled={loading}
-                          className="
-                            text-slate-500
-                            hover:text-black
-                            text-base
-                            leading-none
-                            disabled:opacity-40
-                          "
-                          aria-label={
-                            `Remove ${item.file.name}`
-                          }
-                        >
-                          ×
-                        </button>
-
-                      </div>
-
-                    )
-                  )}
-
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
-
               )}
-
 
               {/* BOTTOM BAR */}
 
-              <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  px-4
-                  py-3
-                  border-t
-                  border-slate-100
-                "
-              >
-
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-3
-                  "
-                >
-
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+                <div className="flex items-center gap-3">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -775,9 +572,7 @@ export default function Home() {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      fileInputRef.current?.click()
-                    }
+                    onClick={() => fileInputRef.current?.click()}
                     disabled={loading}
                     className="
                       w-8
@@ -797,33 +592,21 @@ export default function Home() {
                     +
                   </button>
 
-                  <span
-                    className="
-                      text-xs
-                      text-slate-500
-                    "
-                  >
+                  <span className="text-xs text-slate-500">
                     {selectedFiles.length === 0
                       ? "Add PDFs"
                       : `${selectedFiles.length} PDF${
-                          selectedFiles.length > 1
-                            ? "s"
-                            : ""
+                          selectedFiles.length > 1 ? "s" : ""
                         } selected`}
                   </span>
-
                 </div>
-
 
                 {/* ASK */}
 
                 <button
                   type="button"
                   onClick={handleAsk}
-                  disabled={
-                    loading ||
-                    !question.trim()
-                  }
+                  disabled={loading || !question.trim()}
                   className="
                     bg-black
                     text-white
@@ -833,37 +616,21 @@ export default function Home() {
                     text-sm
                     disabled:bg-slate-300
                     disabled:cursor-not-allowed
+                    hover:bg-slate-800
+                    transition
                   "
                 >
-
-                  {loading
-                    ? "Processing..."
-                    : "Ask"}
-
+                  {loading ? "Processing..." : "Ask"}
                 </button>
-
               </div>
-
             </div>
 
-
-            <div
-              className="
-                text-[11px]
-                text-slate-400
-                mt-2
-                px-2
-              "
-            >
+            <div className="text-[11px] text-slate-400 mt-2 px-2">
               Enter to send · Shift + Enter for a new line
             </div>
-
           </div>
-
         </div>
-
       </section>
-
     </main>
   );
 }

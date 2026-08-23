@@ -8,9 +8,10 @@ MYENV/
 venv/
 .venv/
 
-# Environment variables
+# Environment variables (TRÈS IMPORTANT)
 .env
 .env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -19,6 +20,8 @@ venv/
 # Qdrant
 qdrant_storage/
 storage/
+*.db
+*.sqlite3
 
 # Generated / processed data
 Data/processed/
@@ -40,8 +43,7 @@ Thumbs.db
 # Evaluation results
 Data/evaluation/results/
 
-.env
-__pycache__/
-*.pyc
+# Frontend / Node.js (Pour éviter les conflits à la racine)
 .next/
 node_modules/
+package-lock.json

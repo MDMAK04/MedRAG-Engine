@@ -2,151 +2,98 @@ import uuid
 from pathlib import Path
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct
+from qdrant_client.models import PointStruct, VectorParams, Distance
 from sentence_transformers import SentenceTransformer
 
+# Imports locaux
 from Scripts.ingestion.pdf_processor import extract_pages_from_pdf
 from Scripts.ingestion.chunker import chunk_text
 
-
+# =========================================================
+# CONFIGURATION
+# =========================================================
 COLLECTION_NAME = "medical_articles"
-
 QDRANT_URL = "http://localhost:6333"
-
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
+# Chemin vers ton fichier PDF (Modifie si besoin)
+PDF_PATH = Path("Data/uploads/Test.pdf")
 
+# =========================================================
+# CONNEXION
+# =========================================================
 client = QdrantClient(
-    url=QDRANT_URL
+    url=QDRANT_URL,
+    check_compatibility=False  # Ignore les avertissements de version
 )
 
+model = SentenceTransformer(MODEL_NAME)
 
-model = SentenceTransformer(
-    MODEL_NAME
-)
-
-
-def ingest_pdf(pdf_path: str):
-
-    pdf_path = Path(pdf_path)
-
-    print()
-    print("=" * 60)
-    print("PDF INGESTION")
-    print("=" * 60)
-
-    print(
-        f"File: {pdf_path.name}"
-    )
-
-    pages = extract_pages_from_pdf(
-        str(pdf_path)
-    )
-
-    print(
-        f"Pages extracted: {len(pages)}"
-    )
-
-    points = []
-
-    total_chunks = 0
-
-    for page_data in pages:
-
-        page_number = page_data["page"]
-
-        text = page_data["text"]
-
-        chunks = chunk_text(
-            text,
-            chunk_size=800,
-            chunk_overlap=120
-        )
-
-        print(
-            f"Page {page_number}: "
-            f"{len(chunks)} chunks"
-        )
-
-        for chunk_index, chunk in enumerate(
-            chunks,
-            start=1
-        ):
-
-            if not chunk.strip():
-                continue
-
-            embedding = model.encode(
-                chunk,
-                normalize_embeddings=True
-            ).tolist()
-
-            chunk_id = (
-                f"{pdf_path.stem}"
-                f"_page_{page_number}"
-                f"_chunk_{chunk_index}"
-            )
-
-            payload = {
-
-                "source_type": "uploaded_pdf",
-
-                "filename": pdf_path.name,
-
-                "document_id": pdf_path.stem,
-
-                "page": page_number,
-
-                "chunk_id": chunk_id,
-
-                "path": (
-                    f"PDF page {page_number}"
-                ),
-
-                "text": chunk
-            }
-
-            points.append(
-                PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=embedding,
-                    payload=payload
-                )
-            )
-
-            total_chunks += 1
-
-    print()
-
-    print(
-        f"Total chunks: {total_chunks}"
-    )
-
-    if not points:
-
-        print(
-            "No chunks found."
-        )
-
-        return {
-            "filename": pdf_path.name,
-            "chunks": 0
-        }
-
-    print(
-        "Uploading chunks to Qdrant..."
-    )
-
-    client.upsert(
+# Vérifier si la collection existe, sinon la créer
+print(f"Checking if collection '{COLLECTION_NAME}' exists...")
+if not client.collection_exists(COLLECTION_NAME):
+    print(f"Creating collection '{COLLECTION_NAME}'...")
+    client.create_collection(
         collection_name=COLLECTION_NAME,
-        points=points
+        vectors_config=VectorParams(size=384, distance=Distance.COSINE)
     )
+    print("Collection created successfully.")
+else:
+    print("Collection already exists.")
 
-    print(
-        "PDF successfully indexed."
-    )
+# =========================================================
+# INGESTION DU PDF
+# =========================================================
+def ingest_pdf(pdf_path: Path):
+    if not pdf_path.exists():
+        print(f"ERROR: File not found at {pdf_path}")
+        return
 
-    return {
-        "filename": pdf_path.name,
-        "chunks": total_chunks
-    }
+    print(f"Ingesting file: {pdf_path.name}")
+
+    # 1. Extraire les pages
+    pages = extract_pages_from_pdf(str(pdf_path))
+    
+    points = []
+    
+    for page in pages:
+        page_number = page["page"]
+        text = page["text"]
+        
+        # 2. Découper en chunks
+        chunks = chunk_text(text)  # Utilise ton chunker
+        
+        # 3. Encoder et préparer les points
+        for chunk_index, chunk in enumerate(chunks):
+            vector = model.encode(chunk, normalize_embeddings=True).tolist()
+            
+            # Créer un ID unique pour ce chunk
+            point_id = str(uuid.uuid4())
+            
+            point = PointStruct(
+                id=point_id,
+                vector=vector,
+                payload={
+                    "filename": pdf_path.name,
+                    "file_name": pdf_path.name,
+                    "page": page_number,
+                    "chunk_id": f"{pdf_path.stem}_page_{page_number}_chunk_{chunk_index}",
+                    "text": chunk,
+                    "path": str(pdf_path)
+                }
+            )
+            points.append(point)
+
+    # 4. Insérer dans Qdrant
+    if points:
+        print(f"Inserting {len(points)} points into Qdrant...")
+        client.upsert(
+            collection_name=COLLECTION_NAME,
+            points=points
+        )
+        print("Ingestion completed successfully!")
+    else:
+        print("No points to insert.")
+
+if __name__ == "__main__":
+    ingest_pdf(PDF_PATH)

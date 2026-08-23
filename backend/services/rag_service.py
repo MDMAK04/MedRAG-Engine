@@ -1,37 +1,16 @@
 import os
+import requests
 from typing import Optional
-
-from dotenv import load_dotenv
-from google import genai
 
 from Scripts.retrieval.retriever import retrieve
 
 
 # =========================================================
-# ENVIRONMENT
+# CONFIGURATION OLLAMA (LOCAL)
 # =========================================================
 
-load_dotenv()
-
-GEMINI_API_KEY = os.getenv(
-    "GEMINI_API_KEY"
-)
-
-if not GEMINI_API_KEY:
-    raise RuntimeError(
-        "GEMINI_API_KEY is not configured."
-    )
-
-
-# =========================================================
-# GEMINI
-# =========================================================
-
-client = genai.Client(
-    api_key=GEMINI_API_KEY
-)
-
-MODEL_NAME = "gemini-2.5-flash"
+OLLAMA_URL = "http://localhost:11434"
+OLLAMA_MODEL = "qwen2.5:3b"
 
 
 # =========================================================
@@ -143,19 +122,37 @@ Retrieved medical evidence:
 """
 
     # -----------------------------------------------------
-    # Gemini
+    # OLLAMA (LOCAL LLM) - PAS D'INTERNET REQUIS
     # -----------------------------------------------------
 
-    print("Sending context to Gemini...")
+    print("Sending context to Ollama...")
 
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=prompt,
-    )
+    try:
+        response = requests.post(
+            url=f"{OLLAMA_URL}/api/generate",
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=120  # 2 minutes pour laisser le modèle local réfléchir
+        )
 
-    answer = response.text
+        response.raise_for_status()
 
-    print("Gemini response received")
+        data = response.json()
+        
+        answer = data.get("response", "").strip()
+
+        if not answer:
+            answer = "The local model did not generate an answer."
+
+        print("Ollama response received")
+
+    except requests.exceptions.ConnectionError:
+        answer = "Unable to connect to Ollama. Please make sure Ollama is running (type 'ollama run qwen2.5:3b' in a terminal)."
+    except Exception as e:
+        answer = f"Error generating response: {str(e)}"
 
     return {
         "answer": answer,

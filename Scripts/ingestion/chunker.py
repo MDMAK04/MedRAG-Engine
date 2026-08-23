@@ -1,64 +1,32 @@
-def chunk_text(
-    text: str,
-    chunk_size: int = 800,
-    chunk_overlap: int = 120
-):
+import re
 
-    if not text or not text.strip():
-        return []
-
+def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50):
+    """
+    Découpe le texte en chunks de taille moyenne avec un chevauchement.
+    """
     words = text.split()
-
     chunks = []
-
     current_chunk = []
     current_length = 0
 
     for word in words:
-
-        word_length = len(word) + 1
-
-        if (
-            current_length + word_length > chunk_size
-            and current_chunk
-        ):
-
-            chunks.append(
-                " ".join(current_chunk)
-            )
-
-            overlap_words = []
-            overlap_length = 0
-
-            for previous_word in reversed(current_chunk):
-
-                if (
-                    overlap_length
-                    + len(previous_word)
-                    + 1
-                    > chunk_overlap
-                ):
-                    break
-
-                overlap_words.insert(
-                    0,
-                    previous_word
-                )
-
-                overlap_length += (
-                    len(previous_word) + 1
-                )
-
-            current_chunk = overlap_words
-            current_length = overlap_length
-
         current_chunk.append(word)
-        current_length += word_length
+        current_length += len(word) + 1  # +1 pour l'espace
 
+        if current_length >= chunk_size:
+            chunk_text = " ".join(current_chunk)
+            if len(chunk_text.strip()) > 50: # Ignorer les chunks trop petits
+                chunks.append(chunk_text)
+            
+            # Ajouter le chevauchement (overlap)
+            overlap_words = current_chunk[-overlap:]
+            current_chunk = overlap_words
+            current_length = sum(len(w) + 1 for w in current_chunk)
+
+    # Ajouter le dernier morceau
     if current_chunk:
-
-        chunks.append(
-            " ".join(current_chunk)
-        )
+        final_chunk = " ".join(current_chunk)
+        if len(final_chunk.strip()) > 50:
+            chunks.append(final_chunk)
 
     return chunks
