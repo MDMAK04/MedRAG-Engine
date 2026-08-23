@@ -47,3 +47,10 @@ Data/evaluation/results/
 .next/
 node_modules/
 package-lock.json
+
+
+node_modules/
+MYENV/
+Data/
+.next/
+.env
