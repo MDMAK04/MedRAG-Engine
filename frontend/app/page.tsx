@@ -116,6 +116,7 @@ export default function Home() {
       return [...previous, ...newFiles];
     });
 
+    // ✅ ATTENDRE que l'ingestion soit terminée avant de continuer
     for (const file of pdfFiles) {
       const formData = new FormData();
       formData.append("file", file);

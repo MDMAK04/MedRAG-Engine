@@ -6,11 +6,16 @@ from sentence_transformers import SentenceTransformer
 from qdrant_client.models import Filter, FieldCondition, MatchAny
 
 
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
 COLLECTION_NAME = "medical_articles"
 QDRANT_URL = "http://localhost:6333"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 TOP_K = 5
 
+# Création des instances globales
 _client = None
 _model = None
 
@@ -19,7 +24,10 @@ def get_client():
     global _client
     if _client is None:
         print("Initializing Qdrant...")
-        _client = QdrantClient(url=QDRANT_URL, check_compatibility=False)
+        _client = QdrantClient(
+            url=QDRANT_URL,
+            check_compatibility=False
+        )
         print("Qdrant connected")
     return _client
 
@@ -32,6 +40,10 @@ def get_model():
         print("Embedding model loaded")
     return _model
 
+
+# =========================================================
+# RETRIEVE (Standard)
+# =========================================================
 
 def retrieve(
     question: str,
@@ -47,20 +59,27 @@ def retrieve(
     print("Question:", question)
     print("PDF filter:", pdf_names)
 
-    question_embedding = model.encode(question, normalize_embeddings=True).tolist()
+    question_embedding = model.encode(
+        question,
+        normalize_embeddings=True
+    ).tolist()
 
     query_filter = None
+
     if pdf_names:
         query_filter = Filter(
             must=[
                 FieldCondition(
                     key="filename",
-                    match=MatchAny(any=pdf_names),
+                    match=MatchAny(
+                        any=pdf_names
+                    ),
                 )
             ]
         )
 
     print("Searching Qdrant...")
+
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=question_embedding,
@@ -70,9 +89,11 @@ def retrieve(
     ).points
 
     formatted_results = []
+
     for result in results:
         payload = result.payload or {}
         chunk_id = payload.get("chunk_id", "")
+
         if chunk_id in [r.get("chunk_id") for r in formatted_results]:
             continue
 
@@ -87,8 +108,13 @@ def retrieve(
         })
 
     print(f"Retrieved {len(formatted_results)} chunks")
+
     return formatted_results
 
+
+# =========================================================
+# RETRIEVE BALANCED (Multi-PDF Optimisé)
+# =========================================================
 
 def retrieve_balanced(
     question: str,
@@ -101,19 +127,29 @@ def retrieve_balanced(
     print("BALANCED RETRIEVAL (Multi-PDF)")
     print("=" * 60)
 
-    question_embedding = model.encode(question, normalize_embeddings=True).tolist()
+    question_embedding = model.encode(
+        question,
+        normalize_embeddings=True
+    ).tolist()
 
     formatted_results = []
 
-    if pdf_names and len(pdf_names) > 1:
+    # Calculer le nombre de chunks à récupérer par fichier
+    # Si 1 fichier : 5 chunks. Si 2 fichiers : 3 chunks. Si 3+ : 2 chunks.
+    num_pdfs = len(pdf_names) if pdf_names else 1
+    chunks_per_pdf = max(2, 5 // num_pdfs)  # Minimum 2 chunks par fichier
+
+    if pdf_names:
         for pdf_name in pdf_names:
-            print(f"Searching for chunks in: {pdf_name}")
+            print(f"Searching for chunks in: {pdf_name} (limit: {chunks_per_pdf})")
             
             query_filter = Filter(
                 must=[
                     FieldCondition(
                         key="filename",
-                        match=MatchAny(any=[pdf_name]),
+                        match=MatchAny(
+                            any=[pdf_name]
+                        ),
                     )
                 ]
             )
@@ -122,7 +158,7 @@ def retrieve_balanced(
                 collection_name=COLLECTION_NAME,
                 query=question_embedding,
                 query_filter=query_filter,
-                limit=3,
+                limit=chunks_per_pdf,
                 with_payload=True,
             ).points
 
@@ -146,4 +182,5 @@ def retrieve_balanced(
         formatted_results = retrieve(question=question, pdf_names=pdf_names)
 
     print(f"Retrieved {len(formatted_results)} chunks from multiple files")
+    
     return formatted_results

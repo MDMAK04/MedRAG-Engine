@@ -20,32 +20,34 @@ MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 UPLOADS_DIR = Path("Data/uploads")
 
 # =========================================================
-# CONNEXION
+# CONNEXION (Singleton)
 # =========================================================
-client = QdrantClient(
-    url=QDRANT_URL,
-    check_compatibility=False
-)
+_client = None
+_model = None
 
-model = SentenceTransformer(MODEL_NAME)
+def get_client():
+    global _client
+    if _client is None:
+        _client = QdrantClient(
+            url=QDRANT_URL,
+            check_compatibility=False
+        )
+    return _client
 
-# Vérifier si la collection existe, sinon la créer
-print(f"Checking if collection '{COLLECTION_NAME}' exists...")
-if not client.collection_exists(COLLECTION_NAME):
-    print(f"Creating collection '{COLLECTION_NAME}'...")
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=384, distance=Distance.COSINE)
-    )
-    print("Collection created successfully.")
-else:
-    print("Collection already exists.")
+def get_model():
+    global _model
+    if _model is None:
+        _model = SentenceTransformer(MODEL_NAME)
+    return _model
 
 # =========================================================
 # INGESTION DE TOUS LES PDFs
 # =========================================================
 
 def ingest_pdf(pdf_path: Path):
+    client = get_client()
+    model = get_model()
+
     if not pdf_path.exists():
         print(f"ERROR: File not found at {pdf_path}")
         return
