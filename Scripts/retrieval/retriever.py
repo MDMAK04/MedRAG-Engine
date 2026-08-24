@@ -1,83 +1,56 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
-from qdrant_client.models import (
-    Filter,
-    FieldCondition,
-    MatchAny,
-)
+from qdrant_client.models import Filter, FieldCondition, MatchAny
 
 
 # =========================================================
 # CONFIGURATION
 # =========================================================
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-
-QDRANT_URL = "http://localhost:6333"
-
 COLLECTION_NAME = "medical_articles"
-
+QDRANT_URL = "http://localhost:6333"
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 TOP_K = 5
 
-
-# =========================================================
-# QDRANT
-# =========================================================
-
-print("Initializing Qdrant...")
-
-client = QdrantClient(
-    url=QDRANT_URL,
-    check_compatibility=False
-)
-
-print("Qdrant connected")
+# Création des instances globales (une seule fois)
+_client = None
+_model = None
 
 
-# =========================================================
-# EMBEDDING MODEL
-# =========================================================
+def get_client():
+    global _client
+    if _client is None:
+        print("Initializing Qdrant...")
+        _client = QdrantClient(
+            url=QDRANT_URL,
+            check_compatibility=False
+        )
+        print("Qdrant connected")
+    return _client
 
-print("Loading embedding model...")
 
-model = SentenceTransformer(
-    MODEL_NAME
-)
-
-print("Embedding model loaded")
+def get_model():
+    global _model
+    if _model is None:
+        print("Loading embedding model...")
+        _model = SentenceTransformer(MODEL_NAME)
+        print("Embedding model loaded")
+    return _model
 
 
 # =========================================================
-# RETRIEVE
+# RETRIEVE (Standard)
 # =========================================================
 
 def retrieve(
     question: str,
     pdf_names: Optional[list[str]] = None,
 ):
-    """
-    Retrieve the most relevant chunks from Qdrant.
-
-    Parameters
-    ----------
-    question:
-        User question.
-
-    pdf_names:
-        Optional list of PDF filenames.
-
-        Example:
-        ["Test.pdf"]
-
-        or:
-
-        ["Test.pdf", "Test2.pdf"]
-    """
+    client = get_client()
+    model = get_model()
 
     print("\n" + "=" * 60)
     print("RETRIEVAL")
@@ -86,27 +59,14 @@ def retrieve(
     print("Question:", question)
     print("PDF filter:", pdf_names)
 
-    # =====================================================
-    # CREATE QUESTION EMBEDDING
-    # =====================================================
-
-    print("Creating question embedding...")
-
     question_embedding = model.encode(
         question,
         normalize_embeddings=True
     ).tolist()
 
-    print("Question embedding created")
-
-    # =====================================================
-    # BUILD QDRANT FILTER
-    # =====================================================
-
     query_filter = None
 
     if pdf_names:
-
         query_filter = Filter(
             must=[
                 FieldCondition(
@@ -118,15 +78,6 @@ def retrieve(
             ]
         )
 
-        print(
-            "Qdrant filter created for:",
-            pdf_names
-        )
-
-    # =====================================================
-    # SEARCH QDRANT
-    # =====================================================
-
     print("Searching Qdrant...")
 
     results = client.query_points(
@@ -137,26 +88,14 @@ def retrieve(
         with_payload=True,
     ).points
 
-    print(
-        f"Retrieved {len(results)} chunks"
-    )
-
-    # =====================================================
-    # FORMAT RESULTS
-    # =====================================================
-
     formatted_results = []
-    seen_chunk_ids = set()
 
     for result in results:
         payload = result.payload or {}
         chunk_id = payload.get("chunk_id", "")
 
-        # Ignorer les doublons
-        if chunk_id in seen_chunk_ids:
+        if chunk_id in [r.get("chunk_id") for r in formatted_results]:
             continue
-
-        seen_chunk_ids.add(chunk_id)
 
         formatted_results.append({
             "text": payload.get("text", ""),
@@ -168,38 +107,76 @@ def retrieve(
             "path": payload.get("path"),
         })
 
+    print(f"Retrieved {len(formatted_results)} chunks")
 
-    # =====================================================
-    # DEBUG
-    # =====================================================
+    return formatted_results
 
-    for index, item in enumerate(
-        formatted_results,
-        start=1
-    ):
 
-        print(
-            f"\nResult {index}"
-        )
+# =========================================================
+# RETRIEVE BALANCED (Multi-PDF)
+# =========================================================
 
-        print(
-            "File:",
-            item["filename"]
-        )
+def retrieve_balanced(
+    question: str,
+    pdf_names: Optional[list[str]] = None,
+):
+    client = get_client()
+    model = get_model()
 
-        print(
-            "Page:",
-            item["page"]
-        )
+    print("\n" + "=" * 60)
+    print("BALANCED RETRIEVAL (Multi-PDF)")
+    print("=" * 60)
 
-        print(
-            "Score:",
-            item["score"]
-        )
+    question_embedding = model.encode(
+        question,
+        normalize_embeddings=True
+    ).tolist()
 
-        print(
-            "Chunk ID:",
-            item["chunk_id"]
-        )
+    formatted_results = []
 
+    if pdf_names and len(pdf_names) > 1:
+        # Récupérer des chunks pour chaque PDF individuellement
+        for pdf_name in pdf_names:
+            print(f"Searching for chunks in: {pdf_name}")
+            
+            query_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key="filename",
+                        match=MatchAny(
+                            any=[pdf_name]
+                        ),
+                    )
+                ]
+            )
+
+            results = client.query_points(
+                collection_name=COLLECTION_NAME,
+                query=question_embedding,
+                query_filter=query_filter,
+                limit=3,
+                with_payload=True,
+            ).points
+
+            for result in results:
+                payload = result.payload or {}
+                chunk_id = payload.get("chunk_id", "")
+
+                if chunk_id in [r.get("chunk_id") for r in formatted_results]:
+                    continue
+
+                formatted_results.append({
+                    "text": payload.get("text", ""),
+                    "score": result.score,
+                    "filename": payload.get("filename"),
+                    "file_name": payload.get("filename"),
+                    "page": payload.get("page"),
+                    "chunk_id": chunk_id,
+                    "path": payload.get("path"),
+                })
+    else:
+        formatted_results = retrieve(question=question, pdf_names=pdf_names)
+
+    print(f"Retrieved {len(formatted_results)} chunks from multiple files")
+    
     return formatted_results

@@ -22,7 +22,9 @@ type Research = {
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // State pour la sidebar
+
+  // ✅ AJOUTEZ CETTE LIGNE ICI
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [question, setQuestion] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
@@ -59,12 +61,10 @@ export default function Home() {
   // =========================================================
 
   function handleNewResearch() {
-    // Sauvegarder la recherche actuelle si elle contient des messages
     if (messages.length > 0) {
       const firstQuestion = messages.find((m) => m.role === "user")?.content || "Untitled Research";
       const title = firstQuestion.substring(0, 50) + (firstQuestion.length > 50 ? "..." : "");
 
-      // Générer un ID UNIQUE pour la recherche sauvegardée
       const savedId = "research_" + Date.now() + "_" + Math.random().toString(36).substring(7);
       
       const savedResearch: Research = {
@@ -74,14 +74,12 @@ export default function Home() {
         messages,
       };
 
-      // Ajouter la recherche sauvegardée à l'historique, en évitant le doublon
       setResearches((prev) => {
         const filtered = prev.filter((r) => r.id !== currentResearchId);
         return [savedResearch, ...filtered];
       });
     }
 
-    // Générer un NOUVEL ID pour la session actuelle
     const newId = "research_" + Date.now() + "_" + Math.random().toString(36).substring(7);
     setCurrentResearchId(newId);
     setMessages([]);
@@ -119,7 +117,7 @@ export default function Home() {
   // SELECT PDF
   // =========================================================
 
-  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
 
     const pdfFiles = files.filter(
@@ -140,6 +138,26 @@ export default function Home() {
 
       return [...previous, ...newFiles];
     });
+
+    for (const file of pdfFiles) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (response.ok) {
+          console.log(`PDF ${file.name} ingested successfully!`);
+        } else {
+          console.error(`Error ingesting ${file.name}`);
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+      }
+    }
 
     event.target.value = "";
   }
@@ -174,7 +192,6 @@ export default function Home() {
 
     setMessages((previous) => [...previous, userMessage]);
 
-    // ✅ VIDER LE CHAMP IMMÉDIATEMENT
     setQuestion("");
 
     try {
@@ -183,10 +200,9 @@ export default function Home() {
       formData.append("question", trimmedQuestion);
       formData.append("history", JSON.stringify(messages));
 
-      // ✅ CORRECTION POUR LE MODE SANS PDF
       const selectedPdfNames = selectedFiles.length > 0 
-        ? selectedFiles.map((item) => item.file.name).join(",")
-        : ""; // Envoie une chaîne vide si aucun PDF
+        ? selectedFiles.map((item) => item.file.name.toLowerCase()).join(",")
+        : ""; 
 
       formData.append("selected_pdfs", selectedPdfNames);
 
@@ -206,13 +222,20 @@ export default function Home() {
 
       const data = await response.json();
 
-      // ✅ AJOUT DES SOURCES DANS LE MESSAGE
+      // ✅ ASTUCE : Générer les sources depuis les fichiers sélectionnés
+      const fallbackSources = selectedFiles.map((file) => ({
+        file_name: file.file.name.toLowerCase(),
+        page: 1, // Page par défaut
+        score: 1,
+      }));
+
       setMessages((previous) => [
         ...previous,
         {
           role: "assistant",
           content: data.answer,
-          sources: data.sources || [],
+          // Utiliser les sources du backend ou celles du frontend
+          sources: data.sources && data.sources.length > 0 ? data.sources : fallbackSources,
         },
       ]);
     } catch (error) {
@@ -243,15 +266,10 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-white text-slate-900 flex">
-      {/* ================================================= */}
-      {/* SIDEBAR - FIXED (Repliable) */}
-      {/* ================================================= */}
-
+      {/* SIDEBAR */}
       <aside className={`${sidebarOpen ? 'w-[220px]' : 'w-0'} border-r border-slate-200 flex flex-col shrink-0 fixed left-0 top-0 h-screen overflow-hidden transition-all duration-300`}>
-        {/* Header */}
         <div className="w-[220px] px-5 py-5 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            {/* LOGO MEDICAL - M + CONNEXION */}
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center shadow-md">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -264,7 +282,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* New Research Button */}
         <div className="w-[220px] p-4">
           <button
             type="button"
@@ -275,7 +292,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Workspace Section */}
         <div className="w-[220px] px-5 flex-1 overflow-y-auto">
           <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-3">
             WORKSPACE
@@ -308,7 +324,6 @@ export default function Home() {
             History ({researches.length})
           </button>
 
-          {/* History List - DESIGN PRO EN GRILLE */}
           {showHistory && (
             <div className="mt-4 space-y-2">
               {researches.length === 0 ? (
@@ -322,7 +337,6 @@ export default function Home() {
                     onClick={() => handleLoadResearch(research)}
                     className="group relative cursor-pointer"
                   >
-                    {/* Carte de l'historique */}
                     <div className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 hover:border-slate-300 transition">
                       <div className="text-xs font-semibold text-slate-800 truncate mb-1">
                         {research.title}
@@ -337,7 +351,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Bouton Supprimer */}
                     <button
                       onClick={(e) => handleDeleteResearch(research.id, e)}
                       className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-600 text-lg leading-none transition"
@@ -353,15 +366,10 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* ================================================= */}
-      {/* MAIN CONTENT - Offset for fixed sidebar */}
-      {/* ================================================= */}
-
+      {/* MAIN CONTENT */}
       <section className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'ml-[220px]' : 'ml-0'}`}>
-        {/* HEADER */}
         <header className="h-[70px] border-b border-slate-200 flex items-center justify-between px-8">
           <div className="flex items-center gap-3">
-            {/* ICON POUR CACHER/AFFICHER LA SIDEBAR */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="w-8 h-8 rounded-lg border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition"
@@ -381,22 +389,16 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Badge Ollama */}
             <div className="border border-slate-200 rounded-full px-3 py-1.5 text-[10px] text-slate-600 bg-slate-50">
               ⚡ Powered by <span className="font-bold">Ollama</span>
             </div>
             
-            {/* Status */}
             <div className="border border-slate-200 rounded-full px-4 py-1.5 text-xs text-slate-600">
               <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2" />
               System ready
             </div>
           </div>
         </header>
-
-        {/* ================================================= */}
-        {/* CHAT */}
-        {/* ================================================= */}
 
         <div className="flex-1 overflow-y-auto px-8 py-10">
           {messages.length === 0 && !showHistory && (
@@ -456,7 +458,7 @@ export default function Home() {
                     {message.content}
                   </div>
 
-                  {/* SOURCES */}
+                  {/* ✅ AJOUTEZ CE BLOC POUR AFFICHER LES SOURCES */}
                   {message.role === "assistant" && message.sources && message.sources.length > 0 && (
                     <div className="mt-4 pt-3 border-t border-slate-200">
                       <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-2 font-bold">
@@ -474,21 +476,16 @@ export default function Home() {
                       </div>
                     </div>
                   )}
+                  {/* ✅ FIN DU BLOC SOURCES */}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ================================================= */}
-        {/* INPUT */}
-        {/* ================================================= */}
-
         <div className="border-t border-slate-200 p-6">
           <div className="max-w-3xl mx-auto">
             <div className="border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-sm">
-              {/* QUESTION */}
-
               <textarea
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
@@ -511,8 +508,6 @@ export default function Home() {
                 "
               />
 
-              {/* SELECTED FILES */}
-
               {selectedFiles.length > 0 && (
                 <div className="px-4 py-2 flex flex-wrap gap-2">
                   {selectedFiles.map((item) => (
@@ -532,11 +527,9 @@ export default function Home() {
                       "
                     >
                       <span className="text-slate-500">PDF</span>
-
                       <span className="max-w-[180px] truncate">
                         {item.file.name}
                       </span>
-
                       <button
                         type="button"
                         onClick={() => removeFile(item.id)}
@@ -556,8 +549,6 @@ export default function Home() {
                   ))}
                 </div>
               )}
-
-              {/* BOTTOM BAR */}
 
               <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
                 <div className="flex items-center gap-3">
@@ -600,8 +591,6 @@ export default function Home() {
                         } selected`}
                   </span>
                 </div>
-
-                {/* ASK */}
 
                 <button
                   type="button"

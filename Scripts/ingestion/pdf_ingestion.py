@@ -16,15 +16,15 @@ COLLECTION_NAME = "medical_articles"
 QDRANT_URL = "http://localhost:6333"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Chemin vers ton fichier PDF (Modifie si besoin)
-PDF_PATH = Path("Data/uploads/Test.pdf")
+# Dossier contenant tous les PDFs
+UPLOADS_DIR = Path("Data/uploads")
 
 # =========================================================
 # CONNEXION
 # =========================================================
 client = QdrantClient(
     url=QDRANT_URL,
-    check_compatibility=False  # Ignore les avertissements de version
+    check_compatibility=False
 )
 
 model = SentenceTransformer(MODEL_NAME)
@@ -42,8 +42,9 @@ else:
     print("Collection already exists.")
 
 # =========================================================
-# INGESTION DU PDF
+# INGESTION DE TOUS LES PDFs
 # =========================================================
+
 def ingest_pdf(pdf_path: Path):
     if not pdf_path.exists():
         print(f"ERROR: File not found at {pdf_path}")
@@ -51,7 +52,6 @@ def ingest_pdf(pdf_path: Path):
 
     print(f"Ingesting file: {pdf_path.name}")
 
-    # 1. Extraire les pages
     pages = extract_pages_from_pdf(str(pdf_path))
     
     points = []
@@ -60,22 +60,22 @@ def ingest_pdf(pdf_path: Path):
         page_number = page["page"]
         text = page["text"]
         
-        # 2. Découper en chunks
-        chunks = chunk_text(text)  # Utilise ton chunker
+        chunks = chunk_text(text)
         
-        # 3. Encoder et préparer les points
         for chunk_index, chunk in enumerate(chunks):
             vector = model.encode(chunk, normalize_embeddings=True).tolist()
             
-            # Créer un ID unique pour ce chunk
             point_id = str(uuid.uuid4())
+            
+            # ✅ NORMALISATION : On force le nom en minuscules
+            normalized_name = pdf_path.name.lower()
             
             point = PointStruct(
                 id=point_id,
                 vector=vector,
                 payload={
-                    "filename": pdf_path.name,
-                    "file_name": pdf_path.name,
+                    "filename": normalized_name,
+                    "file_name": normalized_name,
                     "page": page_number,
                     "chunk_id": f"{pdf_path.stem}_page_{page_number}_chunk_{chunk_index}",
                     "text": chunk,
@@ -84,7 +84,6 @@ def ingest_pdf(pdf_path: Path):
             )
             points.append(point)
 
-    # 4. Insérer dans Qdrant
     if points:
         print(f"Inserting {len(points)} points into Qdrant...")
         client.upsert(
@@ -95,5 +94,15 @@ def ingest_pdf(pdf_path: Path):
     else:
         print("No points to insert.")
 
+
+def ingest_all_pdfs():
+    print(f"Searching for PDFs in: {UPLOADS_DIR}")
+    pdf_files = UPLOADS_DIR.glob("*.pdf")
+    
+    for pdf_path in pdf_files:
+        ingest_pdf(pdf_path)
+        print("-" * 50)
+
+
 if __name__ == "__main__":
-    ingest_pdf(PDF_PATH)
+    ingest_all_pdfs()
