@@ -77,10 +77,9 @@ Open your browser and go to: `http://localhost:3000`
 
 ## 🧪 How to Test
 1. Click the **"+"** button to upload multiple PDFs.
-2. Wait for the backend to finish ingesting them (you'll see *"Inserting X points"* in the terminal).
-3. Ask a comparative question such as:  
+2. Ask a comparative question such as:  
    *"Compare the risk factors for ischemic stroke across all the documents."*
-4. Observe the structured response and the blue source pills at the bottom indicating the exact file and page.
+3. Observe the structured response and the blue source pills at the bottom indicating the exact file and page.
 
 ---
 
@@ -105,8 +104,3 @@ Open your browser and go to: `http://localhost:3000`
 **MDMAK04**  
 AI Engineer | Full-Stack Developer  
 GitHub | LinkedIn
-
----
-
-## 📄 License
-This project is licensed under the MIT License.
