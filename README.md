@@ -1,30 +1,5 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Status-Completed-brightgreen" alt="Status">
-  <img src="https://img.shields.io/badge/Python-3.11-blue" alt="Python">
-  <img src="https://img.shields.io/badge/Next.js-14-black" alt="Next.js">
-  <img src="https://img.shields.io/badge/License-MIT-orange" alt="License">
-</p>
-
-<h1 align="center">🧠 MedRAG-Engine 🩺</h1>
-
-<p align="center">
-  <b>Multimodal Agentic Medical Intelligence Platform (100% Local & Private)</b>
-</p>
-
----
-
-## 📖 Table of Contents
-1. [📌 Overview](#-overview)
-2. [✨ Key Features](#-key-features)
-3. [🚀 Architecture](#-architecture)
-4. [🎥 Demo & Screenshots](#-demo--screenshots)
-5. [🛠️ Tech Stack](#️-tech-stack)
-6. [⚙️ Installation & Setup](#️-installation--setup)
-7. [🧪 How to Test](#-how-to-test)
-8. [📊 Evaluation Metrics](#-evaluation-metrics)
-9. [🔒 Privacy & Security](#-privacy--security)
-10. [🏆 What This Project Demonstrates](#-what-this-project-demonstrates)
-11. [📄 License](#-license)
+# 🧠 MedRAG-Engine 🩺
+**Multimodal Agentic Medical Intelligence Platform (100% Local & Private)**
 
 ---
 
@@ -36,35 +11,102 @@ Unlike standard cloud-based chatbots, this platform runs entirely on your machin
 ---
 
 ## ✨ Key Features
-- 🔍 **Advanced Multi-Document RAG**: Ingests multiple PDFs simultaneously, chunks them, embeds them, and retrieves the most relevant passages using semantic search.
+- 🔍 **Advanced Multi-Document RAG**: Ingests multiple PDFs, chunks them, embeds them, and retrieves the most relevant passages.
 - 🧠 **Local LLM**: Powered by `Ollama` (`qwen2.5:7b`). No cloud dependency, no API keys, no data leaks.
-- 📚 **Traceable Sources**: Automatically displays the exact **PDF file and page number** for every fact presented (displayed in blue pills).
-- 🤖 **Agentic AI**: Utilizes a **Supervisor** to intelligently classify queries and route them to specialized agents (RAG Agent, General Agent, Python Analysis Tool).
-- 💬 **Dual Mode**:
-  - **Research Mode**: Ask specific questions about your uploaded PDFs.
+- 📚 **Traceable Sources**: Automatically displays the exact **PDF file and page number** for every fact presented.
+- 🤖 **Agentic AI**: Utilizes a **Supervisor** to intelligently classify queries and route them to specialized agents (RAG, General, Python Tool).
+- 💬 **Dual Mode**:  
+  - **Research Mode**: Ask specific questions about your uploaded PDFs.  
   - **General Chat Mode**: Ask general medical questions without any documents.
-- 🎨 **Professional UI**: Built with Next.js and Tailwind CSS. Features a collapsible sidebar, clean modern design, and history tracking.
+- 🎨 **Professional UI**: Built with Next.js and Tailwind CSS, featuring a collapsible sidebar and modern design.
 - 🌍 **Multilingual Ready**: Architecture supports English, French, and Arabic.
-- ⚡ **Real-time Ingestion**: Automatically ingests PDFs into the vector database the moment they are uploaded.
 
 ---
 
-## 🚀 Architecture
-```text
-User Interface (Next.js)
-        ↓
-API Gateway (FastAPI)
-        ↓
-AI Orchestrator / Supervisor
-        ↓
-      ├── RAG Agent (Multi-Document Retrieval)
-      ├── General Agent (Knowledge based)
-      └── Python Analysis Tool (Math/Calculations)
-        ↓
-Retrieval Layer (Qdrant Vector DB)
-        ↓
-Embedding Model (all-MiniLM-L6-v2)
-        ↓
-Local LLM (Ollama - qwen2.5:7b)
-        ↓
-Answer + Sources + Evidence
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| :--- | :--- |
+| **Frontend** | Next.js, TypeScript, Tailwind CSS |
+| **Backend** | Python, FastAPI, REST APIs |
+| **Vector DB** | Qdrant (Docker) |
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` |
+| **LLM** | Ollama (Local) - `qwen2.5:7b` |
+| **Agents** | Supervisor, RAG, General, Python Tool |
+| **DevOps** | Git, Docker, Local Deployment |
+
+---
+
+## ⚙️ Installation & Setup
+
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- Docker Desktop
+- Ollama (Download from [https://ollama.com](https://ollama.com))
+
+### Step 1: Start Qdrant (Vector Database)
+```bash
+docker run -d --name qdrant -p 6333:6333 qdrant/qdrant
+```
+
+### Step 2: Install Ollama & Download Model
+```bash
+ollama pull qwen2.5:7b
+```
+
+### Step 3: Setup Python Backend
+```bash
+python -m venv MYENV
+MYENV\Scripts\activate  # On Linux/macOS: source MYENV/bin/activate
+pip install -r requirements.txt
+python -m uvicorn backend.main:app --reload --port 8000
+```
+
+### Step 4: Setup Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Step 5: Access the Application
+Open your browser and go to: `http://localhost:3000`
+
+---
+
+## 🧪 How to Test
+1. Click the **"+"** button to upload multiple PDFs.
+2. Wait for the backend to finish ingesting them (you'll see *"Inserting X points"* in the terminal).
+3. Ask a comparative question such as:  
+   *"Compare the risk factors for ischemic stroke across all the documents."*
+4. Observe the structured response and the blue source pills at the bottom indicating the exact file and page.
+
+---
+
+## 🔒 Privacy & Security
+- **Zero Cloud Dependency**: All inference is processed locally via Ollama.
+- **Data Confidentiality**: Your medical documents never leave your machine.
+- **Controlled Execution**: All Python analysis tools run in a controlled environment.
+
+---
+
+## 🏆 What This Project Demonstrates
+- **Advanced RAG Pipeline Design** (Ingestion, Chunking, Vectorization, Retrieval).
+- **Agentic AI Architecture** (Supervisor + Specialized Agents).
+- **Multi-Document Analysis** (Synthesizing information from multiple sources).
+- **Local/Private AI Deployment** (No external API dependencies).
+- **Full-Stack Development** (FastAPI + Next.js).
+- **Problem Solving** (Handling complex PDF parsing, multilingual support, and state management).
+
+---
+
+## 👨‍💻 Author
+**MDMAK04**  
+AI Engineer | Full-Stack Developer  
+GitHub | LinkedIn
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
