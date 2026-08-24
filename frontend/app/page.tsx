@@ -10,7 +10,6 @@ type SelectedFile = {
 type Message = {
   role: "user" | "assistant";
   content: string;
-  sources?: { file_name: string; page: number; score: number }[];
 };
 
 type Research = {
@@ -22,8 +21,6 @@ type Research = {
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // ✅ AJOUTEZ CETTE LIGNE ICI
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [question, setQuestion] = useState("");
@@ -31,12 +28,10 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // History state
   const [researches, setResearches] = useState<Research[]>([]);
   const [currentResearchId, setCurrentResearchId] = useState<string>("");
   const [showHistory, setShowHistory] = useState(false);
 
-  // Load history from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("medrag_history");
     if (saved) {
@@ -44,21 +39,15 @@ export default function Home() {
       setResearches(parsed);
     }
 
-    // Create initial research session with a UNIQUE ID
     const initialId = "research_" + Date.now() + "_" + Math.random().toString(36).substring(7);
     setCurrentResearchId(initialId);
   }, []);
 
-  // Save history to localStorage whenever researches change
   useEffect(() => {
     if (researches.length > 0) {
       localStorage.setItem("medrag_history", JSON.stringify(researches));
     }
   }, [researches]);
-
-  // =========================================================
-  // CREATE NEW RESEARCH
-  // =========================================================
 
   function handleNewResearch() {
     if (messages.length > 0) {
@@ -88,10 +77,6 @@ export default function Home() {
     setShowHistory(false);
   }
 
-  // =========================================================
-  // LOAD RESEARCH FROM HISTORY
-  // =========================================================
-
   function handleLoadResearch(research: Research) {
     setCurrentResearchId(research.id);
     setMessages(research.messages);
@@ -99,10 +84,6 @@ export default function Home() {
     setSelectedFiles([]);
     setShowHistory(false);
   }
-
-  // =========================================================
-  // DELETE RESEARCH
-  // =========================================================
 
   function handleDeleteResearch(id: string, e: React.MouseEvent) {
     e.stopPropagation();
@@ -112,10 +93,6 @@ export default function Home() {
       handleNewResearch();
     }
   }
-
-  // =========================================================
-  // SELECT PDF
-  // =========================================================
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
@@ -162,19 +139,11 @@ export default function Home() {
     event.target.value = "";
   }
 
-  // =========================================================
-  // REMOVE PDF
-  // =========================================================
-
   function removeFile(id: string) {
     setSelectedFiles((previous) =>
       previous.filter((item) => item.id !== id)
     );
   }
-
-  // =========================================================
-  // ASK
-  // =========================================================
 
   async function handleAsk() {
     const trimmedQuestion = question.trim();
@@ -222,20 +191,11 @@ export default function Home() {
 
       const data = await response.json();
 
-      // ✅ ASTUCE : Générer les sources depuis les fichiers sélectionnés
-      const fallbackSources = selectedFiles.map((file) => ({
-        file_name: file.file.name.toLowerCase(),
-        page: 1, // Page par défaut
-        score: 1,
-      }));
-
       setMessages((previous) => [
         ...previous,
         {
           role: "assistant",
           content: data.answer,
-          // Utiliser les sources du backend ou celles du frontend
-          sources: data.sources && data.sources.length > 0 ? data.sources : fallbackSources,
         },
       ]);
     } catch (error) {
@@ -253,10 +213,6 @@ export default function Home() {
     }
   }
 
-  // =========================================================
-  // ENTER
-  // =========================================================
-
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -266,7 +222,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-white text-slate-900 flex">
-      {/* SIDEBAR */}
       <aside className={`${sidebarOpen ? 'w-[220px]' : 'w-0'} border-r border-slate-200 flex flex-col shrink-0 fixed left-0 top-0 h-screen overflow-hidden transition-all duration-300`}>
         <div className="w-[220px] px-5 py-5 border-b border-slate-200">
           <div className="flex items-center gap-3">
@@ -366,7 +321,6 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <section className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'ml-[220px]' : 'ml-0'}`}>
         <header className="h-[70px] border-b border-slate-200 flex items-center justify-between px-8">
           <div className="flex items-center gap-3">
@@ -457,26 +411,6 @@ export default function Home() {
                   <div className="whitespace-pre-wrap">
                     {message.content}
                   </div>
-
-                  {/* ✅ AJOUTEZ CE BLOC POUR AFFICHER LES SOURCES */}
-                  {message.role === "assistant" && message.sources && message.sources.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-slate-200">
-                      <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-2 font-bold">
-                        📚 SOURCES UTILISÉES
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {message.sources.map((source, i) => (
-                          <div 
-                            key={i} 
-                            className="bg-blue-50 border border-blue-200 text-blue-700 rounded-full px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition"
-                          >
-                            📄 {source.file_name} • Page {source.page}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* ✅ FIN DU BLOC SOURCES */}
                 </div>
               </div>
             ))}

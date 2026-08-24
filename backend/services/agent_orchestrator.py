@@ -58,9 +58,6 @@ Problem: {question}
     )
     return response.json().get("response", "").strip()
 
-def clean_response(text: str) -> str:
-    return re.sub(r'\n\n\[File:.*?\](\n\[File:.*?\])*', '', text, flags=re.DOTALL).strip()
-
 def rag_agent(question: str, pdf_names: list) -> dict:
     from Scripts.retrieval.retriever import retrieve_balanced
     
@@ -69,27 +66,21 @@ def rag_agent(question: str, pdf_names: list) -> dict:
     results = retrieve_balanced(question=question, pdf_names=pdf_names)
     
     context_parts = []
-    sources = []
     
     for result in results:
         context_parts.append(
             f"FILE: {result.get('file_name')}, PAGE: {result.get('page')}\n{result.get('text', '')}"
         )
-        sources.append({
-            "file_name": result.get("file_name"),
-            "page": result.get("page"),
-            "score": result.get("score")
-        })
     
     context = "\n\n".join(context_parts) if context_parts else "No context retrieved."
     
+    # PROMPT ASSOUPLI : Permet d'utiliser les connaissances générales si besoin
     prompt = f"""
 You are MedIntel-AI, a medical research assistant.
-Answer the user's question using the retrieved information provided below.
+Answer the user's question using the retrieved information provided below, AND your general medical knowledge if needed.
 ALWAYS ANSWER IN ENGLISH.
-Do not invent information. Use ONLY the retrieved information.
-If the retrieved information is not sufficient, you may use general medical knowledge, but state clearly when you are doing so.
-Do NOT write citations or references in your text.
+Do not invent information.
+If the exact statistics are not in the documents, explain what is known generally.
 
 User question:
 {question}
@@ -105,22 +96,9 @@ Retrieved medical evidence:
     )
     
     raw_answer = response.json().get("response", "").strip()
-    cleaned_answer = clean_response(raw_answer)
-    
-    # ⚠️ AJOUT FORCÉ DES SOURCES DANS LE TEXTE
-    if sources:
-        source_text = "\n\n---\n**Sources utilisées :**\n"
-        seen_sources = set()
-        for source in sources:
-            source_key = f"{source['file_name']} - Page {source['page']}"
-            if source_key not in seen_sources:
-                source_text += f"- 📄 {source_key}\n"
-                seen_sources.add(source_key)
-        cleaned_answer += source_text
     
     return {
-        "answer": cleaned_answer,
-        "sources": sources
+        "answer": raw_answer
     }
 
 def general_agent(question: str) -> str:
@@ -155,9 +133,9 @@ def orchestrate(question: str, pdf_names: list) -> dict:
     if category == "MATH":
         print(f"[AGENT] Executing Python Analysis Tool...")
         result = python_tool(question)
-        return {"answer": result, "sources": []}
+        return {"answer": result}
     
     else:
         print(f"[AGENT] Executing General Agent...")
         answer = general_agent(question)
-        return {"answer": answer, "sources": []}
+        return {"answer": answer}
