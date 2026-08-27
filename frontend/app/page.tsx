@@ -5,11 +5,14 @@ import { useRef, useState, useEffect } from "react";
 type SelectedFile = {
   id: string;
   file: File;
+  previewUrl?: string;
 };
 
 type Message = {
   role: "user" | "assistant";
   content: string;
+  sources?: { file_name: string; page: number; score: number }[];
+  filePreviews?: { type: "pdf" | "image"; name: string; url?: string }[];
 };
 
 type Research = {
@@ -94,34 +97,50 @@ export default function Home() {
     }
   }
 
+  // ✅ FONCTION POUR DÉTECTER LE TYPE (Basée sur l'extension)
+  function isPdf(file: File) {
+    return file.name.toLowerCase().endsWith(".pdf");
+  }
+
+  function isImage(file: File) {
+    return file.name.toLowerCase().endsWith(".jpg") || 
+           file.name.toLowerCase().endsWith(".jpeg") || 
+           file.name.toLowerCase().endsWith(".png") || 
+           file.name.toLowerCase().endsWith(".gif") || 
+           file.name.toLowerCase().endsWith(".bmp");
+  }
+
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
 
-    // ✅ Accepter les PDFs ET les images
     const allowedFiles = files.filter(
       (file) =>
-        file.type === "application/pdf" ||
-        file.type.startsWith("image/") ||
-        file.name.toLowerCase().endsWith(".pdf") ||
-        file.name.toLowerCase().endsWith(".jpg") ||
-        file.name.toLowerCase().endsWith(".jpeg") ||
-        file.name.toLowerCase().endsWith(".png")
+        isPdf(file) || isImage(file)
     );
+
+    const filesWithPreview = allowedFiles.map((file) => {
+      const previewUrl = isImage(file) ? URL.createObjectURL(file) : undefined;
+      return {
+        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
+        file,
+        previewUrl,
+      };
+    });
 
     setSelectedFiles((previous) => {
       const existingNames = new Set(previous.map((item) => item.file.name));
 
-      const newFiles = allowedFiles
-        .filter((file) => !existingNames.has(file.name))
-        .map((file) => ({
-          id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-          file,
+      const newFiles = filesWithPreview
+        .filter((item) => !existingNames.has(item.file.name))
+        .map((item) => ({
+          id: item.id,
+          file: item.file,
+          previewUrl: item.previewUrl,
         }));
 
       return [...previous, ...newFiles];
     });
 
-    // ✅ Envoyer TOUS les fichiers au backend (PDFs et Images)
     for (const file of allowedFiles) {
       const formData = new FormData();
       formData.append("file", file);
@@ -160,9 +179,20 @@ export default function Home() {
 
     setLoading(true);
 
+    // ✅ CRÉER UNE LISTE DE PRÉVISUALISATIONS AVEC LE BON TYPE
+    const filePreviews = selectedFiles.map((item) => {
+      const isPdfFile = isPdf(item.file);
+      return {
+        type: isPdfFile ? ("pdf" as const) : ("image" as const),
+        name: item.file.name.toLowerCase(),
+        url: item.previewUrl,
+      };
+    });
+
     const userMessage: Message = {
       role: "user",
       content: trimmedQuestion,
+      filePreviews: filePreviews,
     };
 
     setMessages((previous) => [...previous, userMessage]);
@@ -175,17 +205,15 @@ export default function Home() {
       formData.append("question", trimmedQuestion);
       formData.append("history", JSON.stringify(messages));
 
-      // ✅ Envoyer les noms des PDFs en minuscules
       const selectedPdfNames = selectedFiles
-        .filter((item) => item.file.type === "application/pdf" || item.file.name.toLowerCase().endsWith(".pdf"))
+        .filter((item) => isPdf(item.file))
         .map((item) => item.file.name.toLowerCase())
         .join(",");
 
       formData.append("selected_pdfs", selectedPdfNames);
 
-      // ✅ Envoyer le chemin de l'image (si une image est sélectionnée)
       const selectedImages = selectedFiles
-        .filter((item) => item.file.type.startsWith("image/") || item.file.name.toLowerCase().endsWith(".jpg") || item.file.name.toLowerCase().endsWith(".png"))
+        .filter((item) => isImage(item.file))
         .map((item) => `Data/uploads/${item.file.name}`)
         .join(",");
 
@@ -397,40 +425,79 @@ export default function Home() {
                 key={index}
                 className={
                   message.role === "user"
-                    ? "flex justify-end"
+                    ? "flex flex-col items-end gap-2"
                     : "flex justify-start"
                 }
               >
-                <div
-                  className={
-                    message.role === "user"
-                      ? `
-                          max-w-[80%]
-                          bg-black
-                          text-white
-                          rounded-2xl
-                          px-5
-                          py-4
-                          text-sm
-                        `
-                      : `
-                          max-w-[90%]
-                          text-slate-800
-                          leading-7
-                          text-sm
-                        `
-                  }
-                >
-                  {message.role === "assistant" && (
+                {/* ✅ AFFICHER TOUS LES FICHIERS AVEC LE MÊME CADRE (Style Gemini) */}
+                {message.role === "user" && message.filePreviews && message.filePreviews.length > 0 && (
+                  <div className="flex flex-row flex-wrap gap-3 items-start justify-end">
+                    {message.filePreviews.map((file, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1 p-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm w-20 h-24 overflow-hidden">
+                        
+                        {/* Si c'est une image : On affiche une miniature */}
+                        {file.type === "image" && file.url && (
+                          <img 
+                            src={file.url} 
+                            alt={file.name}
+                            className="w-full h-14 object-cover rounded-md"
+                          />
+                        )}
+
+                        {/* Si c'est un PDF : On affiche une icône PDF */}
+                        {file.type === "pdf" && (
+                          <div className="w-full h-14 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-red-500">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                            </svg>
+                          </div>
+                        )}
+
+                        {/* Nom du fichier en bas (pour les deux types) */}
+                        <div className="text-[10px] text-slate-500 font-medium truncate w-full text-center">
+                          {file.type === "pdf" ? "PDF" : file.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Texte de la question */}
+                {message.role === "user" && (
+                  <div className="max-w-[80%] bg-black text-white rounded-2xl px-5 py-4 text-sm">
+                    {message.content}
+                  </div>
+                )}
+
+                {/* Réponse de l'assistant */}
+                {message.role === "assistant" && (
+                  <div className="max-w-[90%] text-slate-800 leading-7 text-sm">
                     <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-2">
                       MEDINTEL-AI
                     </div>
-                  )}
+                    <div className="whitespace-pre-wrap">
+                      {message.content}
+                    </div>
 
-                  <div className="whitespace-pre-wrap">
-                    {message.content}
+                    {message.sources && message.sources.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-slate-200">
+                        <div className="text-[11px] tracking-[0.2em] text-slate-400 mb-2 font-bold">
+                          📚 SOURCES UTILISÉES
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {message.sources.map((source, i) => (
+                            <div 
+                              key={i} 
+                              className="bg-blue-50 border border-blue-200 text-blue-700 rounded-full px-3 py-1.5 text-xs font-medium hover:bg-blue-100 transition"
+                            >
+                              📄 {source.file_name} • Page {source.page}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>

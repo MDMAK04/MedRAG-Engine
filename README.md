@@ -36,6 +36,50 @@ Unlike standard cloud-based chatbots, this platform runs entirely on your machin
 | **DevOps** | Git, Docker, Local Deployment |
 
 ---
+## 🏗️ Architecture
+
+```text
+                         ┌─────────────────────┐
+                         │       User          │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │     Next.js UI      │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │      FastAPI        │
+                         │       Backend       │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │  Supervisor Agent   │
+                         └──────────┬──────────┘
+                                    │
+              ┌─────────────────────┼─────────────────────┐
+              │                     │                     │
+              ▼                     ▼                     ▼
+      ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+      │   RAG Agent   │     │ Vision Agent  │     │ General Agent │
+      └───────┬───────┘     └───────┬───────┘     └───────┬───────┘
+              │                     │                     │
+              ▼                     ▼                     ▼
+        ┌──────────┐          ┌──────────┐          ┌──────────┐
+        │  Qdrant  │          │  Ollama  │          │  Ollama  │
+        └────┬─────┘          │  LLaVA   │          │ Qwen 2.5 │
+             │                └──────────┘          └──────────┘
+             ▼
+       Retrieved Context
+             │
+             ▼
+        Ollama Qwen
+             │
+             ▼
+      Final Answer + Sources
+---
 
 ## ⚙️ Installation & Setup
 
@@ -52,7 +96,11 @@ docker run -d --name qdrant -p 6333:6333 qdrant/qdrant
 
 ### Step 2: Install Ollama & Download Model
 ```bash
+# Modèle pour le texte
 ollama pull qwen2.5:7b
+
+# Modèle pour les images (Vision)
+ollama pull llava:7b
 ```
 
 ### Step 3: Setup Python Backend

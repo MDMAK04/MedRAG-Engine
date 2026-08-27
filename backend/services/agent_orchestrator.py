@@ -45,7 +45,6 @@ User question:
         return "GENERAL"
 
 
-# ✅ NOUVELLE FONCTION : Détection par mots-clés (Indépendante de la langue)
 def detect_vision_request(question: str) -> bool:
     vision_keywords = [
         "graphique", "figure", "image", "tableau", "courbe", "diagramme",
@@ -126,7 +125,6 @@ Retrieved medical evidence:
     }
 
 
-# ✅ NOUVELLE FONCTION : Vision Agent avec support des images seules
 def vision_agent(question: str, pdf_names: list, image_paths: list = None) -> dict:
     print(f"[AGENT] Executing Vision Agent...")
     
