@@ -79,7 +79,8 @@ Unlike standard cloud-based chatbots, this platform runs entirely on your machin
              │
              ▼
       Final Answer + Sources
----
+
+```
 
 ## ⚙️ Installation & Setup
 
