@@ -97,16 +97,21 @@ export default function Home() {
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
 
-    const pdfFiles = files.filter(
+    // ✅ Accepter les PDFs ET les images
+    const allowedFiles = files.filter(
       (file) =>
         file.type === "application/pdf" ||
-        file.name.toLowerCase().endsWith(".pdf")
+        file.type.startsWith("image/") ||
+        file.name.toLowerCase().endsWith(".pdf") ||
+        file.name.toLowerCase().endsWith(".jpg") ||
+        file.name.toLowerCase().endsWith(".jpeg") ||
+        file.name.toLowerCase().endsWith(".png")
     );
 
     setSelectedFiles((previous) => {
       const existingNames = new Set(previous.map((item) => item.file.name));
 
-      const newFiles = pdfFiles
+      const newFiles = allowedFiles
         .filter((file) => !existingNames.has(file.name))
         .map((file) => ({
           id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
@@ -116,8 +121,8 @@ export default function Home() {
       return [...previous, ...newFiles];
     });
 
-    // ✅ ATTENDRE que l'ingestion soit terminée avant de continuer
-    for (const file of pdfFiles) {
+    // ✅ Envoyer TOUS les fichiers au backend (PDFs et Images)
+    for (const file of allowedFiles) {
       const formData = new FormData();
       formData.append("file", file);
 
@@ -128,7 +133,7 @@ export default function Home() {
         });
         
         if (response.ok) {
-          console.log(`PDF ${file.name} ingested successfully!`);
+          console.log(`File ${file.name} ingested successfully!`);
         } else {
           console.error(`Error ingesting ${file.name}`);
         }
@@ -170,11 +175,23 @@ export default function Home() {
       formData.append("question", trimmedQuestion);
       formData.append("history", JSON.stringify(messages));
 
-      const selectedPdfNames = selectedFiles.length > 0 
-        ? selectedFiles.map((item) => item.file.name.toLowerCase()).join(",")
-        : ""; 
+      // ✅ Envoyer les noms des PDFs en minuscules
+      const selectedPdfNames = selectedFiles
+        .filter((item) => item.file.type === "application/pdf" || item.file.name.toLowerCase().endsWith(".pdf"))
+        .map((item) => item.file.name.toLowerCase())
+        .join(",");
 
       formData.append("selected_pdfs", selectedPdfNames);
+
+      // ✅ Envoyer le chemin de l'image (si une image est sélectionnée)
+      const selectedImages = selectedFiles
+        .filter((item) => item.file.type.startsWith("image/") || item.file.name.toLowerCase().endsWith(".jpg") || item.file.name.toLowerCase().endsWith(".png"))
+        .map((item) => `Data/uploads/${item.file.name}`)
+        .join(",");
+
+      if (selectedImages) {
+        formData.append("image_path", selectedImages);
+      }
 
       const response = await fetch(
         "http://127.0.0.1:8000/api/chat",
@@ -197,6 +214,7 @@ export default function Home() {
         {
           role: "assistant",
           content: data.answer,
+          sources: data.sources || [],
         },
       ]);
     } catch (error) {
@@ -490,7 +508,7 @@ export default function Home() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="application/pdf,.pdf"
+                    accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png"
                     multiple
                     onChange={handleFileSelect}
                     className="hidden"

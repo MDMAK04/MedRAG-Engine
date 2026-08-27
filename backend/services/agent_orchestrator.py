@@ -8,14 +8,14 @@ OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "qwen2.5:7b"
 
 # ✅ IMPORT DU VISION AGENT
-from backend.services.vision_agent import extract_images_from_pdf, analyze_image
+from backend.services.vision_agent import extract_images_from_pdf, analyze_image, analyze_single_image
 
 
 def classify_question(question: str) -> str:
     prompt = f"""
 You are an AI Supervisor. Classify the following user question into exactly one of these categories:
 - 'RAG' : If the question requires information from specific documents or PDFs.
-- 'VISION' : If the question asks about a specific image, graph, figure, or table in a document.
+- 'VISION' : If the question asks about a specific image, graph, figure, or table.
 - 'MATH' : If the question requires a calculation.
 - 'GENERAL' : If the question is a general conversation or medical knowledge question without needing documents.
 
@@ -47,22 +47,17 @@ User question:
 
 # ✅ NOUVELLE FONCTION : Détection par mots-clés (Indépendante de la langue)
 def detect_vision_request(question: str) -> bool:
-    """
-    Détecte si la question demande l'analyse d'une image/graphique.
-    Fonctionne en français et en anglais.
-    """
-    # Mots-clés en français et en anglais
     vision_keywords = [
-        "graphique", "figure", "image", "tableau", "courbe", "diagramme", "chart", "graph", "figure", "image", "table", "plot", "voir la page", "look at page", "page 5", "page 1"
+        "graphique", "figure", "image", "tableau", "courbe", "diagramme",
+        "chart", "graph", "figure", "image", "table", "plot",
+        "voir la page", "look at page", "radiographie", "x-ray", "mri", "scan",
+        "regarde", "describe this image", "décris cette image", "décris"
     ]
-    
     question_lower = question.lower()
     
-    # Vérifier si la question contient un mot-clé
     for keyword in vision_keywords:
         if keyword in question_lower:
             return True
-    
     return False
 
 
@@ -131,11 +126,24 @@ Retrieved medical evidence:
     }
 
 
-# ✅ NOUVELLE FONCTION : Vision Agent
-def vision_agent(question: str, pdf_names: list) -> dict:
+# ✅ NOUVELLE FONCTION : Vision Agent avec support des images seules
+def vision_agent(question: str, pdf_names: list, image_paths: list = None) -> dict:
     print(f"[AGENT] Executing Vision Agent...")
     
-    # 1. Trouver les PDFs sélectionnés dans le dossier uploads
+    # ✅ Si l'utilisateur a téléchargé une image seule, on l'analyse
+    if image_paths and len(image_paths) > 0:
+        print(f"[VISION] Analyzing single image: {image_paths[0]}")
+        answer = analyze_single_image(question, str(image_paths[0]))
+        return {
+            "answer": answer,
+            "sources": [{
+                "file_name": Path(image_paths[0]).name,
+                "page": None,
+                "score": 1.0
+            }]
+        }
+    
+    # ✅ Sinon, on extrait les images des PDFs
     uploads_dir = Path("Data/uploads")
     pdf_paths = []
     
@@ -147,7 +155,6 @@ def vision_agent(question: str, pdf_names: list) -> dict:
     if not pdf_paths:
         return {"answer": "No PDFs found for vision analysis.", "sources": []}
     
-    # 2. Extraire les images de TOUS les PDFs sélectionnés
     all_images = []
     for pdf_path in pdf_paths:
         images = extract_images_from_pdf(str(pdf_path), max_images_per_page=3)
@@ -158,7 +165,6 @@ def vision_agent(question: str, pdf_names: list) -> dict:
     if not all_images:
         return {"answer": "No images found in the selected documents.", "sources": []}
     
-    # 3. Analyser l'image la plus pertinente (ici, on prend la première)
     target_image = all_images[0]
     print(f"[VISION] Analyzing image on page {target_image['page']} of {target_image['pdf_name']}")
     
@@ -191,24 +197,23 @@ User question:
     return response.json().get("response", "").strip()
 
 
-def orchestrate(question: str, pdf_names: list) -> dict:
+def orchestrate(question: str, pdf_names: list, image_paths: list = None) -> dict:
     print(f"\n[SUPERVISOR] Analyzing question: {question}")
     
     # ✅ ÉTAPE 1 : Détection par mots-clés (Force le Vision Agent)
     if detect_vision_request(question):
         print(f"[SUPERVISOR] Vision request detected via keywords!")
         print(f"[SUPERVISOR] {len(pdf_names)} PDF(s) detected! Forcing Vision Agent...")
-        return vision_agent(question, pdf_names)
+        return vision_agent(question, pdf_names, image_paths)
     
     # ✅ ÉTAPE 2 : Classification par LLM (Si pas de mots-clés)
     category = classify_question(question)
     print(f"[SUPERVISOR] Category selected: {category}")
     
     if category == "VISION":
-        return vision_agent(question, pdf_names)
+        return vision_agent(question, pdf_names, image_paths)
     
     if pdf_names:
-        # ✅ Si PDFs présents, forcer le RAG
         print(f"[SUPERVISOR] {len(pdf_names)} PDF(s) detected! Forcing RAG Agent...")
         print(f"[AGENT] Executing RAG Agent...")
         return rag_agent(question, pdf_names)
