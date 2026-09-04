@@ -26,7 +26,6 @@ Built with production-grade architecture, MedRAG-Engine enables healthcare profe
   - **Research Mode** — Answer specific questions based on uploaded medical documents
   - **General Mode** — Query general medical knowledge without documents
 - **Modern UI** — Production-ready interface built with Next.js, TypeScript, and Tailwind CSS
-- **Multilingual Support** — Architecture supports English, French, and Arabic
 - **Enterprise-Grade Deployment** — Docker containerization, CI/CD pipelines, and cloud-ready infrastructure
 
 ---
