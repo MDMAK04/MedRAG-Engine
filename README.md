@@ -197,16 +197,36 @@ Open your browser and go to: `http://localhost:3000`
 
 ## ☁️ Cloud & MLOps
 
-Le projet est conçu pour une architecture Cloud-Ready :
+MedRAG-Engine a été conçu avec une architecture **"Cloud-Ready"** et est livré avec des fichiers de configuration pour le déploiement automatisé.
 
-### AWS (Terraform)
-- `deployment/terraform/main.tf` : Infrastructure as Code pour déployer sur AWS (S3, EC2, RDS).
-- Prêt pour un déploiement cloud automatisé.
+### 🏗️ Infrastructure as Code (AWS avec Terraform)
 
-### Kubernetes (K8s)
-- `k8s/deployment.yaml` : Déploiement de l'application.
-- `k8s/service.yaml` : Exposition du service.
-- Prêt pour l'orchestration à grande échelle.
+Le dossier `deployment/terraform/` contient des scripts Terraform pour déployer l'infrastructure nécessaire sur AWS. Cette configuration permet de créer automatiquement :
+
+- **S3** : Stockage des documents PDF.
+- **RDS (PostgreSQL)** : Base de données pour les métadonnées.
+- **EC2** : Serveur pour héberger la base de données vectorielle Qdrant.
+
+**Fichiers inclus :**
+- `main.tf` : Les ressources AWS (S3, RDS, EC2).
+- `variables.tf` : Les variables de configuration (dont le mot de passe sécurisé de la base de données).
+- `outputs.tf` : Les sorties de l'infrastructure (ex : IP de l'instance EC2).
+
+> **Note de sécurité :** Les mots de passe et identifiants sensibles ne sont PAS dans le code. Ils sont stockés séparément dans `terraform.tfvars` (qui est ignoré par Git).
+
+---
+
+### ☸️ Orchestration avec Kubernetes (K8s)
+
+Le dossier `k8s/` contient des fichiers de configuration pour déployer l'application sur un cluster Kubernetes (testé avec Minikube).
+
+**Fichiers inclus :**
+- `deployment.yaml` : Crée le déploiement de l'application (nombre de réplicas, image Docker, ressources).
+- `service.yaml` : Expose l'application sur un port accessible.
+- `qdrant-deployment.yaml` : Crée le déploiement de la base de données vectorielle.
+- `qdrant-service.yaml` : Expose Qdrant sur le réseau interne du cluster.
+
+> **Compétence démontrée :** Vous savez orchestrer des conteneurs avec Kubernetes pour un déploiement à grande échelle.
 
 ---
 
