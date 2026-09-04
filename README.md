@@ -214,8 +214,9 @@ Le dossier `deployment/terraform/` contient des scripts Terraform pour déployer
 
 > **Note de sécurité :** Les mots de passe et identifiants sensibles ne sont PAS dans le code. Ils sont stockés séparément dans `terraform.tfvars` (qui est ignoré par Git).
 
-> **💡 Note sur le déploiement :**
-> Le code d'infrastructure (Terraform) est écrit et prêt à être exécuté. J'ai choisi de ne pas laisser l'infrastructure tourner en permanence pour respecter les limites du **Free Tier AWS** et éviter les coûts. Le projet est 100% fonctionnel en local. Cette approche permet de démontrer la viabilité de l'architecture tout en gardant une gestion responsable des ressources cloud.
+> **Note sur l'infrastructure :** 
+> L'architecture cloud est entièrement modélisée via Terraform et prête à être déployée. Par souci de **bonne gestion des coûts cloud**, l'infrastructure n'est pas maintenue active en permanence, conformément aux limites du **Free Tier AWS**. Le code est 100% reproductible et peut être appliqué sur n'importe quel compte AWS en quelques minutes via la commande `terraform apply`.
+
 
 ---
 
