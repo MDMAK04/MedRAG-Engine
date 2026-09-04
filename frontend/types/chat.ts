@@ -16,3 +16,9 @@ export interface ChatResponse {
   answer: string;
   sources: Source[];
 }
+
+export interface ChatRequest {
+  question: string;
+  history?: string;
+  selected_pdfs?: string;
+}

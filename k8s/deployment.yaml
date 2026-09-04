@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medrag-backend
+  labels:
+    app: medrag-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: medrag-backend
+  template:
+    metadata:
+      labels:
+        app: medrag-backend
+    spec:
+      containers:
+        - name: backend
+          image: votre_username/medrag-backend:latest  # Remplacez par votre Docker Hub
+          ports:
+            - containerPort: 8000
+          env:
+            - name: OLLAMA_URL
+              value: "http://host.docker.internal:11434"
+            - name: QDRANT_URL
+              value: "http://qdrant-service:6333"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"

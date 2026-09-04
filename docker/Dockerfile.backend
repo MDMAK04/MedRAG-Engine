@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Installer les dépendances système (Packages mis à jour pour Debian)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier et installer les dépendances Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copier tout le code
+COPY backend/ /app/backend/
+COPY Scripts/ /app/Scripts/
+COPY Data/ /app/Data/
+
+# Exposer le port
+EXPOSE 8000
+
+# Commande de démarrage
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
