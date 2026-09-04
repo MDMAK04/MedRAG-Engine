@@ -10,7 +10,7 @@
 
 ## 📌 Overview
 
-**MedRAG-Engine** is a **100% local, private, and free** Medical Research Assistant. It leverages **Advanced RAG (Retrieval-Augmented Generation)** and **Multimodal AI** to analyze complex medical PDFs, images, and answer intricate clinical questions with **traceable sources**.
+**MedRAG-Engine** is a **100% local, private, and free** Medical Research Assistant. It leverages **Advanced RAG (Retrieval-Augmented Generation)** and **Multimodal AI** to analyze complex medical PDFs, images, and answer intricate clinical questions with **accurate and contextualized answers**.
 
 Unlike standard cloud-based chatbots, this platform runs entirely on your machine using **Ollama** and **Qdrant**, ensuring **total patient data confidentiality** and **zero API costs**.
 
@@ -21,7 +21,6 @@ Unlike standard cloud-based chatbots, this platform runs entirely on your machin
 - 🔍 **Advanced Multi-Document RAG**: Ingests multiple PDFs, chunks them, embeds them, and retrieves the most relevant passages.
 - 🖼️ **Vision Agent**: Analyzes images, radiographs, and graphs directly uploaded by the user.
 - 🧠 **Local LLM**: Powered by `Ollama` (`qwen2.5:7b` for text, `llava:7b` for vision). No cloud dependency, no API keys, no data leaks.
-- 📚 **Traceable Sources**: Automatically displays the exact **PDF file and page number** for every fact presented.
 - 🤖 **Agentic AI**: Utilizes a **Supervisor** to intelligently classify queries and route them to specialized agents (RAG, Vision, General, Python Tool).
 - 💬 **Dual Mode**:
   - **Research Mode**: Ask specific questions about your uploaded PDFs.
@@ -89,7 +88,7 @@ Unlike standard cloud-based chatbots, this platform runs entirely on your machin
         Ollama Qwen
              │
              ▼
-      Final Answer + Sources
+      Final Answer
 ```
 
 ---
