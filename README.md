@@ -133,6 +133,11 @@ docker compose -f docker/docker-compose.yml up
 - Construit les images Docker.
 - Les publie automatiquement sur Docker Hub.
 
+Les images sont disponibles publiquement sur Docker Hub pour faciliter le déploiement :
+
+- **Backend** : [`elmakhloufi/medrag-backend`](https://hub.docker.com/r/elmakhloufi/medrag-backend)
+- **Frontend** : [`elmakhloufi/medrag-frontend`](https://hub.docker.com/r/elmakhloufi/medrag-frontend)
+
 ---
 
 ## ⚙️ Installation & Setup (Manuelle)
