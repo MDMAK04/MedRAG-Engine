@@ -43,7 +43,7 @@ Unlike standard cloud-based chatbots, this platform runs entirely on your machin
 | **LLM (Vision)** | Ollama (Local) - `llava:7b` |
 | **Agents** | Supervisor, RAG, Vision, General, Python Tool |
 | **DevOps** | Docker, Docker Compose, GitHub Actions |
-| **Cloud-Ready** | AWS (Terraform), Kubernetes (K8s) |
+| **Cloud-Ready** | AWS (Terraform) |
 
 ---
 
@@ -217,20 +217,6 @@ Le dossier `deployment/terraform/` contient des scripts Terraform pour déployer
 > **Note sur l'infrastructure :** 
 > L'architecture cloud est entièrement modélisée via Terraform et prête à être déployée. Par souci de **bonne gestion des coûts cloud**, l'infrastructure n'est pas maintenue active en permanence, conformément aux limites du **Free Tier AWS**. Le code est 100% reproductible et peut être appliqué sur n'importe quel compte AWS en quelques minutes via la commande `terraform apply`.
 
-
----
-
-### ☸️ Orchestration avec Kubernetes (K8s)
-
-Le dossier `k8s/` contient des fichiers de configuration pour déployer l'application sur un cluster Kubernetes (testé avec Minikube).
-
-**Fichiers inclus :**
-- `deployment.yaml` : Crée le déploiement de l'application (nombre de réplicas, image Docker, ressources).
-- `service.yaml` : Expose l'application sur un port accessible.
-- `qdrant-deployment.yaml` : Crée le déploiement de la base de données vectorielle.
-- `qdrant-service.yaml` : Expose Qdrant sur le réseau interne du cluster.
-
-> **Compétence démontrée :** Vous savez orchestrer des conteneurs avec Kubernetes pour un déploiement à grande échelle.
 
 ---
 
