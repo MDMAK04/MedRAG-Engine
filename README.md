@@ -198,7 +198,7 @@ On every `git push` to the `main` branch:
 
 ### Cloud Deployment (AWS with Terraform)
 
-Infrastructure-as-Code configuration for AWS deployment is included in `deployment/terraform/`:
+The entire cloud infrastructure is defined as code and can be deployed to AWS in minutes. Terraform configuration files are located in `deployment/terraform/`:
 
 ```
 deployment/terraform/
@@ -207,12 +207,23 @@ deployment/terraform/
 └── outputs.tf       # Infrastructure outputs
 ```
 
-**Resources Created:**
-- **S3** — Document storage
-- **RDS (PostgreSQL)** — Metadata database
-- **EC2** — Qdrant vector database hosting
+**Infrastructure Components:**
+- **S3 Bucket** — Secure document storage
+- **RDS (PostgreSQL)** — Metadata and application database
+- **EC2 Instance** — Qdrant vector database server
+- **Security Groups & IAM Roles** — Network and access control
 
-**Security Note:** Sensitive credentials are stored in `terraform.tfvars` (git-ignored), not in version control.
+**Deployment:**
+```bash
+cd deployment/terraform
+terraform init
+terraform plan
+terraform apply
+```
+
+> **Infrastructure Management:** The complete cloud architecture is fully reproducible and can be deployed to any AWS account within minutes using `terraform apply`. For cost optimization and compliance with AWS Free Tier limits, the infrastructure is designed to be spun up on-demand and torn down when not in use. All configuration is version-controlled and 100% repeatable, ensuring consistent deployments across environments.
+
+**Security Note:** Sensitive credentials (database passwords, API keys) are stored in `terraform.tfvars` (git-ignored), never in version control.
 
 ---
 
@@ -233,7 +244,7 @@ deployment/terraform/
 - **Local/Private AI** — No external API dependencies or data transmission
 - **Full-Stack Development** — FastAPI backend with Next.js frontend
 - **Enterprise DevOps** — Docker, GitHub Actions, CI/CD, container registry integration
-- **Infrastructure as Code** — Terraform configuration for cloud deployment
+- **Infrastructure as Code** — Terraform configuration for reproducible cloud deployment
 - **Production Readiness** — Error handling, logging, monitoring capabilities
 
 ---
