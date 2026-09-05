@@ -66,3 +66,5 @@ uvloop
 watchfiles
 websockets
 zstandard
+pytest
+pytest-cov
