@@ -16,6 +16,22 @@ Built with production-grade architecture, MedRAG-Engine enables healthcare profe
 
 ---
 
+## 🎥 Démonstration
+
+### 📸 Capture d'écran
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="MedRAG-Engine Multimodal RAG Demo" width="800">
+</p>
+
+### 🎬 Vidéo de démonstration détaillée
+
+Regardez la démonstration complète en vidéo sur Google Drive :
+
+👉 [**Lien vers la vidéo de démonstration**](https://drive.google.com/file/d/VOTRE_ID_VIDEO/view)
+
+---
+
 ## Key Features
 
 - **Multi-Document RAG Pipeline** — Efficiently ingests, chunks, vectorizes, and retrieves relevant passages from multiple PDFs with precise source attribution
