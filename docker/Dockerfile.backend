@@ -13,9 +13,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copier tout le code
+# Copier tout le codecls
 COPY backend/ /app/backend/
-COPY Scripts/ /app/Scripts/
 # COPY Data/ /app/Data/
 
 # Exposer le port
