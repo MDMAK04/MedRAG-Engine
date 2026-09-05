@@ -10,9 +10,9 @@
 
 ## Overview
 
-**MedRAG-Engine** is a sophisticated medical intelligence platform that combines Retrieval-Augmented Generation (RAG) with multimodal AI to extract and analyze evidence-based medical information. The platform operates entirely on your infrastructure using local models and vector databases, ensuring data confidentiality, compliance with healthcare privacy standards, and zero API dependencies.
+**MedRAG-Engine** is a sophisticated medical intelligence platform that combines Retrieval-Augmented Generation (RAG) with multimodal AI to extract and analyze evidence-based medical information. [...]
 
-Built with production-grade architecture, MedRAG-Engine enables healthcare professionals, researchers, and developers to create intelligent medical applications with complete control over data processing and model inference.
+Built with production-grade architecture, MedRAG-Engine enables healthcare professionals, researchers, and developers to create intelligent medical applications with complete control over data pro[...]
 
 ---
 
@@ -21,7 +21,7 @@ Built with production-grade architecture, MedRAG-Engine enables healthcare profe
 - **Multi-Document RAG Pipeline** — Efficiently ingests, chunks, vectorizes, and retrieves relevant passages from multiple PDFs with precise source attribution
 - **Multimodal Analysis** — Processes both text documents and medical images (radiographs, graphs, diagnostic imaging)
 - **Local LLM Inference** — Powered by Ollama with specialized models for text (`qwen2.5:7b`) and vision (`llava:7b`) tasks
-- **Agentic Architecture** — Intelligent supervisor agent that routes queries to specialized agents (RAG, Vision, General, Python Tools)
+- **Agentic Architecture** — Intelligent supervisor agent that routes queries to specialized agents (Supervisor, RAG, Vision, General)
 - **Dual-Mode Operation**
   - **Research Mode** — Answer specific questions based on uploaded medical documents
   - **General Mode** — Query general medical knowledge without documents
@@ -220,7 +220,7 @@ terraform plan
 terraform apply
 ```
 
-> **Infrastructure Management:** The complete cloud architecture is fully reproducible and can be deployed to any AWS account within minutes using `terraform apply`. For cost optimization and compliance with AWS Free Tier limits, the infrastructure is designed to be spun up on-demand and torn down when not in use. All configuration is version-controlled and 100% repeatable, ensuring consistent deployments across environments.
+> **Infrastructure Management:** The complete cloud architecture is fully reproducible and can be deployed to any AWS account within minutes using `terraform apply`. For cost optimization and com[...]
 
 **Security Note:** Sensitive credentials (database passwords, API keys) are stored in `terraform.tfvars` (git-ignored), never in version control.
 
@@ -252,19 +252,19 @@ terraform apply
 
 ```
 MedRAG-Engine/
-├── backend/              # FastAPI application
-│   ├── agents/          # Agent implementations
-│   ├── rag/             # RAG pipeline
-│   ├── vision/          # Vision processing
-│   └── main.py          # Application entry point
-├── frontend/            # Next.js application
-│   ├── app/             # React components and pages
-│   ├── public/          # Static assets
-│   └── package.json     # Dependencies
-├── deployment/          # Deployment configurations
-│   ├── terraform/       # AWS infrastructure
-│   └── docker/          # Docker compositions
-└── docker/              # Docker build files
+├── backend/                  # FastAPI application
+│   ├── api/                 # API routes (chat, upload)
+│   ├── schemas/             # Data models (ChatResponse, etc.)
+│   ├── services/            # Business logic (orchestrator, RAG, Vision, LLM, ingestion, retrieval)
+│   └── main.py              # Application entry point
+├── frontend/                # Next.js application
+│   ├── app/                 # React components and pages
+│   ├── public/              # Static assets
+│   └── package.json         # Dependencies
+├── docker/                  # Docker build files
+├── deployment/              # Deployment configurations
+│   └── terraform/           # AWS infrastructure
+└── requirements.txt         # Python dependencies
 ```
 
 ---
