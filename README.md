@@ -2,7 +2,7 @@
 
 **A Local-First Medical Research Platform Powered by Advanced RAG and Multimodal AI**
 
-![CI/CD Status](https://github.com/MDMAK04/MedRAG-Engine/actions/workflows/deploy.yml/badge.svg)
+![CI/CD Status](https://github.com/MDMAK04/MedRAG-Engine/actions/workflows/deploy.yml/badge.svg?branch=main)
 ![Docker Pulls](https://img.shields.io/docker/pulls/elmakhloufi/medrag-backend)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -260,8 +260,22 @@ terraform apply
 - **Full-Stack Development** — FastAPI backend with Next.js frontend
 - **Enterprise DevOps** — Docker, GitHub Actions, CI/CD, container registry integration
 - **Infrastructure as Code** — Terraform configuration for reproducible cloud deployment
-- **Production Readiness** — Error handling, logging, monitoring capabilities
+- **Tested** — Unit tests implemented for API and chunking; CI/CD pipeline runs tests before deployment
 
+---
+
+## 🧪 Tests
+
+MedRAG-Engine est livré avec une suite de tests unitaires qui garantissent la qualité du code.
+
+### Tests inclus :
+- **`tests/test_api.py`** : Vérifie que l'API FastAPI démarre et répond correctement.
+- **`tests/test_chunker.py`** : Vérifie que la fonction de découpage de texte (`chunk_text`) fonctionne correctement.
+
+### Exécuter les tests :
+```bash
+pytest -v
+```
 ---
 
 ## Project Structure
