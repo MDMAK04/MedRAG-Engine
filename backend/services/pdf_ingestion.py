@@ -11,23 +11,25 @@ QDRANT_URL = "http://localhost:6333"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 UPLOADS_DIR = Path("Data/uploads")
 
-client = QdrantClient(url=QDRANT_URL, check_compatibility=False)
-model = SentenceTransformer(MODEL_NAME)
+# FONCTION : Créer la collection si elle n'existe pas
 
-# Vérifier si la collection existe, sinon la créer
-print(f"Checking if collection '{COLLECTION_NAME}' exists...")
-if not client.collection_exists(COLLECTION_NAME):
-    print(f"Creating collection '{COLLECTION_NAME}'...")
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=384, distance=Distance.COSINE)
-    )
-    print("Collection created successfully.")
-else:
-    print("Collection already exists.")
+def ensure_collection_exists(client):
+    if not client.collection_exists(COLLECTION_NAME):
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+        )
 
+
+# INGESTION DE TOUS LES PDFs
 
 def ingest_pdf(pdf_path: Path):
+    client = QdrantClient(url=QDRANT_URL, check_compatibility=False)
+    model = SentenceTransformer(MODEL_NAME)
+
+    # Vérifier / Créer la collection
+    ensure_collection_exists(client)
+
     if not pdf_path.exists():
         print(f"ERROR: File not found at {pdf_path}")
         return
@@ -77,6 +79,9 @@ def ingest_pdf(pdf_path: Path):
 
 
 def ingest_all_pdfs():
+    client = QdrantClient(url=QDRANT_URL, check_compatibility=False)
+    ensure_collection_exists(client)
+
     print(f"Searching for PDFs in: {UPLOADS_DIR}")
     pdf_files = UPLOADS_DIR.glob("*.pdf")
     
