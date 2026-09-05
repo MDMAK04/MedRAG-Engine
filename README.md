@@ -10,25 +10,25 @@
 
 ## Overview
 
-**MedRAG-Engine** is a sophisticated medical intelligence platform that combines Retrieval-Augmented Generation (RAG) with multimodal AI to extract and analyze evidence-based medical information. [...]
+**MedRAG-Engine** is a local-first Retrieval-Augmented Generation platform for biomedical research that combines document and image analysis with on-premise LLMs and vector search to deliver evidence-backed answers while keeping data private.
 
-Built with production-grade architecture, MedRAG-Engine enables healthcare professionals, researchers, and developers to create intelligent medical applications with complete control over data pro[...]
+MedRAG-Engine ingests PDFs and medical images, chunks and vectorizes content using sentence-transformers, and indexes it in Qdrant for fast retrieval. A Supervisor agent routes queries to specialized agents (RAG, Vision, General) which build context and call local LLMs (Ollama — qwen2.5 for text, llava for vision) to produce answers with explicit source attribution (file + page). The platform is packaged with Docker and Terraform for reproducible local or cloud deployment and is designed for privacy-sensitive biomedical workflows.
 
 ---
 
-## 🎥 Démonstration
+## 🎥 Demonstration
 
-### 📸 Capture d'écran
+### 📸 Screenshot
 
 <p align="center">
   <img src="assets/demo.png" alt="MedRAG-Engine Multimodal RAG Demo" width="800">
 </p>
 
-### 🎬 Vidéo de démonstration détaillée
+### 🎬 Detailed demonstration video
 
-Regardez la démonstration complète en vidéo sur Google Drive :
+Watch the full video demonstration on Google Drive :
 
-👉 [**Lien vers la vidéo de démonstration**](https://drive.google.com/file/d/VOTRE_ID_VIDEO/view)
+👉 [**Link to the demonstration video**](https://drive.google.com/file/d/VOTRE_ID_VIDEO/view)
 
 ---
 
