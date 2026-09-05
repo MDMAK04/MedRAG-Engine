@@ -1,14 +1,8 @@
 from pathlib import Path
 from typing import Optional, List
-
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 from qdrant_client.models import Filter, FieldCondition, MatchAny
-
-
-# =========================================================
-# CONFIGURATION
-# =========================================================
 
 COLLECTION_NAME = "medical_articles"
 QDRANT_URL = "http://localhost:6333"
@@ -31,7 +25,6 @@ def get_client():
         print("Qdrant connected")
     return _client
 
-
 def get_model():
     global _model
     if _model is None:
@@ -40,10 +33,6 @@ def get_model():
         print("Embedding model loaded")
     return _model
 
-
-# =========================================================
-# RETRIEVE (Standard)
-# =========================================================
 
 def retrieve(
     question: str,

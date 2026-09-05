@@ -15,7 +15,6 @@ def extract_pages_from_pdf(pdf_path: str):
     for page_number, page in enumerate(document, start=1):
         # Extraction brute
         raw_text = page.get_text("text").strip()
-        
         # Nettoyage agressif
         text = clean_extracted_text(raw_text)
 

@@ -1,56 +1,36 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
+# Environment & Secrets 
+.env
+.env.*
+!.env.example
+*.tfvars
 
-# Virtual environment
+# Virtual Environments
 MYENV/
 venv/
 .venv/
 
-# Environment variables (TRÈS IMPORTANT)
-.env
-.env.*
-!.env.example
+# Dependencies
+node_modules/
+package-lock.json
 
-# IDE
-.vscode/
-.idea/
-
-# Qdrant
+# Data & Storage (Local)
+Data/
 qdrant_storage/
 storage/
 *.db
 *.sqlite3
 
-# Generated / processed data
-Data/processed/
-Data/raw/
+# Build & Cache
+__pycache__/
+*.py[cod]
+*.pyo
+.next/
 
-# Large source data
-Data/raw/**/*.pdf
-Data/raw/**/*.xml
-Data/raw/**/*.jpg
-Data/raw/**/*.txt
-
-# Logs
-*.log
-
-# OS
+# IDE & OS
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
 
-# Evaluation results
-Data/evaluation/results/
-
-# Frontend / Node.js (Pour éviter les conflits à la racine)
-.next/
-node_modules/
-package-lock.json
-
-
-node_modules/
-MYENV/
-Data/
-.next/
-.env
+# Logs
+*.log

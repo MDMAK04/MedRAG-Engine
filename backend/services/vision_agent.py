@@ -7,7 +7,6 @@ from pathlib import Path
 OLLAMA_URL = "http://localhost:11434"
 VISION_MODEL = "llava:7b"
 
-
 def extract_images_from_pdf(pdf_path: str, max_images_per_page: int = 2):
     doc = pymupdf.open(pdf_path)
     images = []
@@ -29,19 +28,20 @@ def extract_images_from_pdf(pdf_path: str, max_images_per_page: int = 2):
     doc.close()
     return images
 
-
 def encode_image_to_base64(image_bytes: bytes) -> str:
     return base64.b64encode(image_bytes).decode("utf-8")
 
-
-def analyze_image(question: str, image_bytes: bytes, page_text: str = "") -> str:
+def analyze_image(question: str, image_bytes: bytes, context_text: str = "") -> str:
     image_base64 = encode_image_to_base64(image_bytes)
-    
+
     prompt = f"""
 You are a medical imaging assistant.
-Analyze the provided image and answer the user's question.
-Answer in English.
+Analyze the image and answer the user's question.
+Use the following medical context from a PDF to help you answer:
 
+{context_text}
+
+Answer in English.
 Question: {question}
 """
     
@@ -54,22 +54,17 @@ Question: {question}
                 "images": [image_base64],
                 "stream": False
             },
-            timeout=300
+            timeout=300  
         )
         response.raise_for_status()
-        return response.json().get("response", "No response from vision model.")
+        return response.json().get("response", "No response")
     except Exception as e:
         print(f"Vision model warning: {e}")
-        return "The vision model is too slow or could not analyze the image due to system constraints."
+        return "The vision model is too slow or could not analyze the image."
 
-
-# ✅ NOUVELLE FONCTION : Analyser une image seule (sans PDF)
 def analyze_single_image(question: str, image_path: str) -> str:
     """
     ROLE : Analyse une image téléchargée directement (sans passer par un PDF).
     """
-    # 1. Lire le fichier image
     image_bytes = Path(image_path).read_bytes()
-    
-    # 2. Analyser avec le modèle de vision
     return analyze_image(question, image_bytes)

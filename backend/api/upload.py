@@ -1,16 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 from pathlib import Path
-
-# Import de vos fonctions d'ingestion
-from Scripts.ingestion.pdf_ingestion import ingest_pdf
+from backend.services.pdf_ingestion import ingest_pdf
 
 router = APIRouter()
 
 UPLOAD_DIR = Path("Data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-# ✅ Définir les types de fichiers acceptés
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp"}
 
 
@@ -34,7 +30,6 @@ async def upload_pdf(file: UploadFile = File(...)):
             ingest_pdf(file_path)
             return {"message": "PDF uploaded and ingested successfully", "filename": file.filename.lower()}
         else:
-            # ✅ Cas d'une image seule
             print(f"Uploading image: {file.filename}")
             return {"message": "Image uploaded successfully", "filename": file.filename.lower(), "type": "image"}
     except Exception as e:

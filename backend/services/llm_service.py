@@ -1,8 +1,7 @@
-import os
 import requests
 
 OLLAMA_URL = "http://localhost:11434"
-OLLAMA_MODEL = "qwen2.5:3b"
+OLLAMA_MODEL = "qwen2.5:7b"
 
 SYSTEM_INSTRUCTION = """
 You are MedIntel-AI, a medical research assistant.

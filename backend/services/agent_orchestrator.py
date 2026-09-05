@@ -1,44 +1,33 @@
 import requests
 import json
-import re
 from pathlib import Path
 
 # Configuration Ollama
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "qwen2.5:7b"
 
-# ✅ IMPORT DU VISION AGENT
+from backend.services.llm_service import generate_answer
 from backend.services.vision_agent import extract_images_from_pdf, analyze_image, analyze_single_image
-
 
 def classify_question(question: str) -> str:
     prompt = f"""
 You are an AI Supervisor. Classify the following user question into exactly one of these categories:
 - 'RAG' : If the question requires information from specific documents or PDFs.
 - 'VISION' : If the question asks about a specific image, graph, figure, or table.
-- 'MATH' : If the question requires a calculation.
 - 'GENERAL' : If the question is a general conversation or medical knowledge question without needing documents.
 
-Output ONLY the category name (RAG, VISION, MATH, or GENERAL). Nothing else.
+Output ONLY the category name (RAG, VISION, or GENERAL). Nothing else.
 
 User question:
 {question}
 """
     try:
-        response = requests.post(
-            url=f"{OLLAMA_URL}/api/generate",
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            timeout=30
-        )
-        response.raise_for_status()
-        category = response.json().get("response", "").strip().upper()
+        category = generate_answer(question, prompt).upper().strip()
         
         if "VISION" in category:
             return "VISION"
         elif "RAG" in category:
             return "RAG"
-        elif "MATH" in category:
-            return "MATH"
         else:
             return "GENERAL"
     except:
@@ -60,31 +49,8 @@ def detect_vision_request(question: str) -> bool:
     return False
 
 
-def python_tool(question: str) -> str:
-    numbers = re.findall(r'\d+\.?\d*', question)
-    
-    if len(numbers) >= 2:
-        try:
-            values = [float(n) for n in numbers]
-            average = sum(values) / len(values)
-            return f"Calculated average: {average:.2f}"
-        except:
-            pass
-    
-    prompt = f"""
-You are a calculator. Solve the following math problem. Output ONLY the result.
-Problem: {question}
-"""
-    response = requests.post(
-        url=f"{OLLAMA_URL}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-        timeout=30
-    )
-    return response.json().get("response", "").strip()
-
-
 def rag_agent(question: str, pdf_names: list) -> dict:
-    from Scripts.retrieval.retriever import retrieve_balanced
+    from backend.services.retriever import retrieve_balanced
     
     pdf_names = [name.lower() for name in pdf_names]
     
@@ -99,28 +65,10 @@ def rag_agent(question: str, pdf_names: list) -> dict:
     
     context = "\n\n".join(context_parts) if context_parts else "No context retrieved."
     
-    prompt = f"""
-You are MedIntel-AI, a medical research assistant.
-Answer the user's question using the retrieved information provided below.
-ALWAYS ANSWER IN ENGLISH.
-If the retrieved information is not sufficient, you may use general medical knowledge.
-If you need to reference a specific figure or table, mention the FILE and PAGE.
-
-User question:
-{question}
-
-Retrieved medical evidence:
-{context}
-"""
-    
-    response = requests.post(
-        url=f"{OLLAMA_URL}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-        timeout=180
-    )
+    answer = generate_answer(question, context)
     
     return {
-        "answer": response.json().get("response", "").strip(),
+        "answer": answer,
         "sources": []
     }
 
@@ -128,10 +76,24 @@ Retrieved medical evidence:
 def vision_agent(question: str, pdf_names: list, image_paths: list = None) -> dict:
     print(f"[AGENT] Executing Vision Agent...")
     
-    # ✅ Si l'utilisateur a téléchargé une image seule, on l'analyse
+    context_text = ""
+    if pdf_names:
+        try:
+            from backend.services.retriever import retrieve_balanced
+            pdf_names_lower = [name.lower() for name in pdf_names]
+            results = retrieve_balanced(question=question, pdf_names=pdf_names_lower)
+            
+            for result in results:
+                context_text += f"Source: {result.get('file_name')}, Page: {result.get('page')}\n{result.get('text', '')}\n\n"
+        except Exception as e:
+            print(f"[VISION] Warning: Could not retrieve PDF context (Qdrant may be down): {e}")
+            context_text = ""
+    
     if image_paths and len(image_paths) > 0:
         print(f"[VISION] Analyzing single image: {image_paths[0]}")
-        answer = analyze_single_image(question, str(image_paths[0]))
+        image_bytes = Path(image_paths[0]).read_bytes()
+        
+        answer = analyze_image(question, image_bytes, context_text)
         return {
             "answer": answer,
             "sources": [{
@@ -141,7 +103,6 @@ def vision_agent(question: str, pdf_names: list, image_paths: list = None) -> di
             }]
         }
     
-    # ✅ Sinon, on extrait les images des PDFs
     uploads_dir = Path("Data/uploads")
     pdf_paths = []
     
@@ -166,7 +127,7 @@ def vision_agent(question: str, pdf_names: list, image_paths: list = None) -> di
     target_image = all_images[0]
     print(f"[VISION] Analyzing image on page {target_image['page']} of {target_image['pdf_name']}")
     
-    answer = analyze_image(question, target_image["image"], target_image.get("text", ""))
+    answer = analyze_image(question, target_image["image"], context_text)
     
     return {
         "answer": answer,
@@ -179,32 +140,17 @@ def vision_agent(question: str, pdf_names: list, image_paths: list = None) -> di
 
 
 def general_agent(question: str) -> str:
-    prompt = f"""
-You are MedIntel-AI, a helpful medical research assistant.
-Answer the user's question concisely and accurately.
-ALWAYS ANSWER IN ENGLISH.
-
-User question:
-{question}
-"""
-    response = requests.post(
-        url=f"{OLLAMA_URL}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-        timeout=60
-    )
-    return response.json().get("response", "").strip()
+    return generate_answer(question, "")
 
 
 def orchestrate(question: str, pdf_names: list, image_paths: list = None) -> dict:
     print(f"\n[SUPERVISOR] Analyzing question: {question}")
     
-    # ✅ ÉTAPE 1 : Détection par mots-clés (Force le Vision Agent)
     if detect_vision_request(question):
         print(f"[SUPERVISOR] Vision request detected via keywords!")
         print(f"[SUPERVISOR] {len(pdf_names)} PDF(s) detected! Forcing Vision Agent...")
         return vision_agent(question, pdf_names, image_paths)
     
-    # ✅ ÉTAPE 2 : Classification par LLM (Si pas de mots-clés)
     category = classify_question(question)
     print(f"[SUPERVISOR] Category selected: {category}")
     
@@ -215,11 +161,6 @@ def orchestrate(question: str, pdf_names: list, image_paths: list = None) -> dic
         print(f"[SUPERVISOR] {len(pdf_names)} PDF(s) detected! Forcing RAG Agent...")
         print(f"[AGENT] Executing RAG Agent...")
         return rag_agent(question, pdf_names)
-    
-    if category == "MATH":
-        print(f"[AGENT] Executing Python Analysis Tool...")
-        result = python_tool(question)
-        return {"answer": result, "sources": []}
     
     else:
         print(f"[AGENT] Executing General Agent...")
