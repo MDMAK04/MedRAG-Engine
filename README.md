@@ -21,7 +21,7 @@ Built with production-grade architecture, MedRAG-Engine enables healthcare profe
 ### 📸 Capture d'écran
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="MedRAG-Engine Multimodal RAG Demo" width="800">
+  <img src="assets/demo.png" alt="MedRAG-Engine Multimodal RAG Demo" width="800">
 </p>
 
 ### 🎬 Vidéo de démonstration détaillée
