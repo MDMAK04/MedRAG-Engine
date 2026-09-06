@@ -317,7 +317,7 @@ MIT License — See LICENSE file for details
 AI Engineer | Full-Stack Developer
 
 - GitHub: [MDMAK04](https://github.com/MDMAK04)
-- LinkedIn: [Your LinkedIn Profile]
+- LinkedIn: [https://www.linkedin.com/in/mohammed-el-makhloufi/]
 
 ---
 
