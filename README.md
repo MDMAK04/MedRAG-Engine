@@ -62,51 +62,11 @@ Regardez la démonstration complète en vidéo sur Google Drive :
 
 ---
 
-## Architecture
+## System Architecture
 
-```
-                        ┌─────────────────────┐
-                        │       User          │
-                        └──────────┬──────────┘
-                                   │
-                                   ▼
-                        ┌─────────────────────┐
-                        │     Next.js UI      │
-                        └──────────┬──────────┘
-                                   │
-                                   ▼
-                        ┌─────────────────────┐
-                        │      FastAPI        │
-                        │       Backend       │
-                        └──────────┬──────────┘
-                                   │
-                                   ▼
-                        ┌─────────────────────┐
-                        │  Supervisor Agent   │
-                        └──────────┬──────────┘
-                                   │
-                   ┌───────────────┼───────────────┐
-                   │               │               │
-                   ▼               ▼               ▼
-           ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-           │   RAG Agent   │   │ Vision Agent  │   │ General Agent │
-           └───────┬───────┘   └───────┬───────┘   └───────┬───────┘
-                   │                   │                   │
-                   ▼                   ▼                   ▼
-             ┌──────────┐         ┌──────────┐         ┌──────────┐
-             │  Qdrant  │         │  Ollama  │         │  Ollama  │
-             │(Vector DB)         │  LLaVA   │         │ Qwen 2.5 │
-             └────┬─────┘         └──────────┘         └──────────┘
-                  │
-                  ▼
-             Retrieved Context
-                  │
-                  ▼
-             Ollama Qwen
-                  │
-                  ▼
-             Final Answer
-```
+<p align="center">
+  <img src="assets/pipline.png" alt="MedRAG-Engine Complete System Architecture" width="1000">
+</p>
 
 ---
 
