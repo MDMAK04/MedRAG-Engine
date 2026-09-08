@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 from pathlib import Path
-from backend.services.pdf_ingestion import ingest_pdf
+from backend.ingestion.pdf_ingestion import ingest_pdf
 
 router = APIRouter()
 

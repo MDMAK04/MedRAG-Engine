@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Form, File, UploadFile
 from typing import Optional
 import json
-from backend.services.agent_orchestrator import orchestrate
+from backend.orchestration.agent_orchestrator import orchestrate
 
 router = APIRouter()
 

@@ -1,4 +1,4 @@
-from backend.services.chunker import chunk_text
+from backend.ingestion.chunker import chunk_text
 
 def test_chunk_text_returns_chunks():
     text = "This is a medical document about atrial fibrillation. " * 100

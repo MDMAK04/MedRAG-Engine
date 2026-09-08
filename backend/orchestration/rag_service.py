@@ -1,8 +1,8 @@
 import os
 import requests
 from typing import Optional
-from backend.services.retriever import retrieve
-from backend.services.llm_service import generate_answer
+from backend.retrieval.retriever import retrieve
+from backend.generation.llm_service import generate_answer
 
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "qwen2.5:7b"

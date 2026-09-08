@@ -3,8 +3,8 @@ from pathlib import Path
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
 from sentence_transformers import SentenceTransformer
-from backend.services.pdf_processor import extract_pages_from_pdf
-from backend.services.chunker import chunk_text
+from backend.ingestion.pdf_processor import extract_pages_from_pdf
+from backend.ingestion.chunker import chunk_text
 
 COLLECTION_NAME = "medical_articles"
 QDRANT_URL = "http://localhost:6333"

@@ -6,8 +6,8 @@ from pathlib import Path
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "qwen2.5:7b"
 
-from backend.services.llm_service import generate_answer
-from backend.services.vision_agent import extract_images_from_pdf, analyze_image, analyze_single_image
+from backend.generation.llm_service import generate_answer
+from backend.orchestration.vision_agent import extract_images_from_pdf, analyze_image, analyze_single_image
 
 def classify_question(question: str) -> str:
     prompt = f"""
@@ -50,7 +50,7 @@ def detect_vision_request(question: str) -> bool:
 
 
 def rag_agent(question: str, pdf_names: list) -> dict:
-    from backend.services.retriever import retrieve_balanced
+    from backend.retrieval.retriever import retrieve_balanced
     
     pdf_names = [name.lower() for name in pdf_names]
     
@@ -79,7 +79,7 @@ def vision_agent(question: str, pdf_names: list, image_paths: list = None) -> di
     context_text = ""
     if pdf_names:
         try:
-            from backend.services.retriever import retrieve_balanced
+            from backend.retrieval.retriever import retrieve_balanced
             pdf_names_lower = [name.lower() for name in pdf_names]
             results = retrieve_balanced(question=question, pdf_names=pdf_names_lower)
             
