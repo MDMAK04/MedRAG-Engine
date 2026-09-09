@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Form, File, UploadFile
+from fastapi import APIRouter, HTTPException, Form
 from typing import Optional
 import json
 from backend.orchestration.agent_orchestrator import orchestrate
@@ -9,8 +9,7 @@ router = APIRouter()
 async def chat_endpoint(
     question: str = Form(...),
     selected_pdfs: Optional[str] = Form(None),
-    history: Optional[str] = Form(None),
-    image_path: Optional[str] = Form(None)  # Nouveau champ pour les images
+    image_path: Optional[str] = Form(None)  
 ):
     print("\n" + "=" * 60)
     print("MEDINTEL CHAT")

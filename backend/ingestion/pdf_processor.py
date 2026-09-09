@@ -16,7 +16,7 @@ def extract_pages_from_pdf(pdf_path: str):
         # Extraction brute
         raw_text = page.get_text("text").strip()
         # Nettoyage agressif
-        text = clean_extracted_text(raw_text)
+        text = clean_extracted_text(raw_text) 
 
         if not text:
             continue
@@ -34,4 +34,4 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     return "\n\n".join(
         f"PAGE {page['page']}\n\n{page['text']}"
         for page in pages
-    )
+)

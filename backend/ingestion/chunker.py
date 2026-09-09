@@ -1,5 +1,3 @@
-import re
-
 def chunk_text(text: str, chunk_size: int = 800, chunk_overlap: int = 120) -> list:
     """
     Découpe un texte en morceaux (chunks) de taille fixe avec un chevauchement.

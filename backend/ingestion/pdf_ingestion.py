@@ -20,7 +20,6 @@ def ensure_collection_exists(client):
             vectors_config=VectorParams(size=384, distance=Distance.COSINE)
         )
 
-
 # INGESTION DE TOUS LES PDFs
 
 def ingest_pdf(pdf_path: Path):
@@ -76,19 +75,3 @@ def ingest_pdf(pdf_path: Path):
         print("Ingestion completed successfully!")
     else:
         print("No points to insert.")
-
-
-def ingest_all_pdfs():
-    client = QdrantClient(url=QDRANT_URL, check_compatibility=False)
-    ensure_collection_exists(client)
-
-    print(f"Searching for PDFs in: {UPLOADS_DIR}")
-    pdf_files = UPLOADS_DIR.glob("*.pdf")
-    
-    for pdf_path in pdf_files:
-        ingest_pdf(pdf_path)
-        print("-" * 50)
-
-
-if __name__ == "__main__":
-    ingest_all_pdfs()

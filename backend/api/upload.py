@@ -12,9 +12,8 @@ ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp"}
 
 @router.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    # Vérifier l'extension
-    file_extension = Path(file.filename).suffix.lower()
     
+    file_extension = Path(file.filename).suffix.lower()    
     if file_extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Only PDF or Image files are allowed")
     

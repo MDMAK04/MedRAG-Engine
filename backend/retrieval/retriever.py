@@ -13,7 +13,6 @@ TOP_K = 5
 _client = None
 _model = None
 
-
 def get_client():
     global _client
     if _client is None:
@@ -48,11 +47,7 @@ def retrieve(
     print("Question:", question)
     print("PDF filter:", pdf_names)
 
-    question_embedding = model.encode(
-        question,
-        normalize_embeddings=True
-    ).tolist()
-
+    question_embedding = model.encode(question, normalize_embeddings=True).tolist()
     query_filter = None
 
     if pdf_names:
