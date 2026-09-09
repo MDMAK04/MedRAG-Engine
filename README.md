@@ -10,9 +10,9 @@
 
 ## Overview
 
-**MedRAG-Engine** is a local-first Retrieval-Augmented Generation platform for biomedical research that combines document and image analysis with on-premise LLMs and vector search to deliver evidence-backed answers while keeping data private.
+**MedRAG-Engine** is a local-first Retrieval-Augmented Generation platform for biomedical research that combines document and image analysis with on-premise LLMs and vector search to deliver evidence-based answers while keeping data private.
 
-MedRAG-Engine ingests PDFs and medical images, chunks and vectorizes content using sentence-transformers, and indexes it in Qdrant for fast retrieval. A Supervisor agent routes queries to specialized agents (RAG, Vision, General) which build context and call local LLMs (Ollama : qwen2.5 for text, llava for vision) to produce answers with explicit source attribution (file + page). The platform is packaged with Docker and Terraform for reproducible local or cloud deployment and is designed for privacy-sensitive biomedical workflows.
+**Built-From-Scratch RAG Pipeline:** MedRAG-Engine implements a complete RAG system from the ground up—ingesting PDFs, chunking text intelligently, vectorizing content using sentence-transformers, indexing in Qdrant for fast semantic search, and retrieving contextually relevant passages. A Supervisor agent intelligently routes queries to specialized agents (RAG, Vision, General) which augment context and call local LLMs (Ollama: qwen2.5:7b for text, llava:7b for vision) to generate accurate answers with explicit source attribution (document name + page number).
 
 ---
 
@@ -34,7 +34,7 @@ Watch the full video demonstration on Google Drive :
 
 ## Key Features
 
-- **Multi-Document RAG Pipeline** — Efficiently ingests, chunks, vectorizes, and retrieves relevant passages from multiple PDFs with precise source attribution
+- **Multi-Document RAG Pipeline (Built from Scratch)** — Custom end-to-end implementation with document ingestion, semantic chunking, sentence-transformer vectorization, Qdrant indexing, and retrieval; efficiently handles multiple PDFs with precise source attribution
 - **Multimodal Analysis** — Processes both text documents and medical images (radiographs, graphs, diagnostic imaging)
 - **Local LLM Inference** — Powered by Ollama with specialized models for text (`qwen2.5:7b`) and vision (`llava:7b`) tasks
 - **Agentic Architecture** — Intelligent supervisor agent that routes queries to specialized agents (Supervisor, RAG, Vision, General)
@@ -213,11 +213,11 @@ terraform apply
 
 ## What This Project Demonstrates
 
-- **Advanced RAG Implementation** — Production-grade document ingestion, chunking, vectorization, and retrieval pipeline
-- **Agentic AI Architecture** — Supervisor pattern with specialized agents for different task types
-- **Multimodal Processing** — Unified interface for text and vision-based analysis
-- **Local/Private AI** — No external API dependencies or data transmission
-- **Full-Stack Development** — FastAPI backend with Next.js frontend
+- **Advanced RAG Implementation (Built from Scratch)** — Complete custom pipeline with PDF ingestion, intelligent text chunking, sentence-transformer vectorization, Qdrant vector storage, semantic retrieval, and LLM-augmented generation—no external RAG frameworks
+- **Agentic AI Architecture** — Supervisor pattern with specialized agents for different task types (RAG, Vision, General query)
+- **Multimodal Processing** — Unified interface for text and vision-based analysis with separate LLM models
+- **Local/Private AI** — No external API dependencies or cloud data transmission; all processing on-premise
+- **Full-Stack Development** — FastAPI backend with Next.js frontend, TypeScript type safety across the stack
 - **Enterprise DevOps** — Docker, GitHub Actions, CI/CD, container registry integration
 - **Infrastructure as Code** — Terraform configuration for reproducible cloud deployment
 - **Tested** — Unit tests implemented for API and chunking; CI/CD pipeline runs tests before deployment
@@ -249,25 +249,25 @@ MedRAG-Engine/
 │   │   └── llm_service.py   # LLM inference wrapper
 │   ├── ingestion/           # Document processing pipeline
 │   │   ├── __init__.py
-│   │   ├── pdf_ingestion.py # PDF extraction and chunking
-│   │   ├── chunker.py       # Text chunking algorithms
+│   │   ├── pdf_ingestion.py # PDF extraction and vectorization
+│   │   ├── chunker.py       # Semantic text chunking algorithms
 │   │   └── pdf_processor.py # PDF processing utilities
-│   ├── orchestration/       # Agent orchestration
+│   ├── orchestration/       # Agent orchestration and routing
 │   │   ├── __init__.py
-│   │   ├── agent_orchestrator.py  # Supervisor agent routing
+│   │   ├── agent_orchestrator.py  # Supervisor agent with question classification
 │   │   └── vision_agent.py   # Vision agent for image analysis
-│   ├── retrieval/           # Vector search and retrieval
+│   ├── retrieval/           # Vector search and semantic retrieval
 │   │   ├── __init__.py
-│   │   └── retriever.py     # Qdrant vector search
+│   │   └── retriever.py     # Qdrant vector search with multi-document support
 │   ├── schemas/             # Data models (ChatResponse, etc.)
-│   └── main.py              # Application entry point
+│   └── main.py              # FastAPI application entry point
 ├── frontend/                # Next.js application
 │   ├── app/                 # React components and pages
 │   ├── public/              # Static assets
 │   └── package.json         # Dependencies
 ├── docker/                  # Docker build files
 ├── deployment/              # Deployment configurations
-│   └── terraform/           # AWS infrastructure
+│   └── terraform/           # AWS infrastructure as code
 └── requirements.txt         # Python dependencies
 ```
 
