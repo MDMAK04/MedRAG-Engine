@@ -12,7 +12,7 @@
 
 **MedRAG-Engine** is a local-first Retrieval-Augmented Generation platform for biomedical research that combines document and image analysis with on-premise LLMs and vector search to deliver evidence-backed answers while keeping data private.
 
-MedRAG-Engine ingests PDFs and medical images, chunks and vectorizes content using sentence-transformers, and indexes it in Qdrant for fast retrieval. A Supervisor agent routes queries to specialized agents (RAG, Vision, General) which build context and call local LLMs (Ollama — qwen2.5 for text, llava for vision) to produce answers with explicit source attribution (file + page). The platform is packaged with Docker and Terraform for reproducible local or cloud deployment and is designed for privacy-sensitive biomedical workflows.
+MedRAG-Engine ingests PDFs and medical images, chunks and vectorizes content using sentence-transformers, and indexes it in Qdrant for fast retrieval. A Supervisor agent routes queries to specialized agents (RAG, Vision, General) which build context and call local LLMs (Ollama : qwen2.5 for text, llava for vision) to produce answers with explicit source attribution (file + page). The platform is packaged with Docker and Terraform for reproducible local or cloud deployment and is designed for privacy-sensitive biomedical workflows.
 
 ---
 
@@ -196,7 +196,7 @@ terraform plan
 terraform apply
 ```
 
-> **Infrastructure Management:** The complete cloud architecture is fully reproducible and can be deployed to any AWS account within minutes using `terraform apply`. For cost optimization and com[...]
+> **Infrastructure Management:** The complete cloud architecture is fully reproducible and can be deployed to any AWS account within minutes using `terraform apply`. For cost optimization and compliance, ensure to review and adjust resource specifications in `variables.tf` before deployment.
 
 **Security Note:** Sensitive credentials (database passwords, API keys) are stored in `terraform.tfvars` (git-ignored), never in version control.
 
@@ -244,8 +244,22 @@ pytest -v
 MedRAG-Engine/
 ├── backend/                  # FastAPI application
 │   ├── api/                 # API routes (chat, upload)
+│   ├── generation/          # Text generation and LLM services
+│   │   ├── __init__.py
+│   │   └── llm_service.py   # LLM inference wrapper
+│   ├── ingestion/           # Document processing pipeline
+│   │   ├── __init__.py
+│   │   ├── pdf_ingestion.py # PDF extraction and chunking
+│   │   ├── chunker.py       # Text chunking algorithms
+│   │   └── pdf_processor.py # PDF processing utilities
+│   ├── orchestration/       # Agent orchestration
+│   │   ├── __init__.py
+│   │   ├── agent_orchestrator.py  # Supervisor agent routing
+│   │   └── vision_agent.py   # Vision agent for image analysis
+│   ├── retrieval/           # Vector search and retrieval
+│   │   ├── __init__.py
+│   │   └── retriever.py     # Qdrant vector search
 │   ├── schemas/             # Data models (ChatResponse, etc.)
-│   ├── services/            # Business logic (orchestrator, RAG, Vision, LLM, ingestion, retrieval)
 │   └── main.py              # Application entry point
 ├── frontend/                # Next.js application
 │   ├── app/                 # React components and pages
